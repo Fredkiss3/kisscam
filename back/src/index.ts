@@ -1,16 +1,23 @@
 import Fastify from "fastify";
 import fastifyIO from "fastify-socket.io";
+import cors from "@fastify/cors";
 
 const server = Fastify({});
+
+// Activate cors for all routes and all origins
+server.register(cors, (instance) => {
+  return (req, callback) => {
+    callback(null, {
+      origin: req.headers.origin as string,
+    });
+  };
+});
+
+// add the socket.io plugin
 server.register(fastifyIO);
 
-server.get("/", (req, reply) => {
-  server.io.emit("hello");
-});
-
-server.get("/ping", async (request, reply) => {
-  return { pong: "it worked!" };
-});
+// room => Map of userId => socket
+const DB: Record<string, Array<{ socketId: string }>> = {};
 
 server.ready().then(() => {
   // we need to wait for the server to be ready, else `server.io` is undefined
@@ -18,21 +25,16 @@ server.ready().then(() => {
 
   server.io.of("/").adapter.on("create-room", (room) => {
     console.log(`room ${room} was created`);
+    DB[room] = [];
   });
 
   server.io.of("/").adapter.on("join-room", (room, id) => {
+    DB[room].push({ socketId: id });
     console.log(`socket ${id} has joined room ${room}`);
+    console.dir(DB);
   });
 
   server.io.on("connection", (socket) => {
-    // ...
-    console.log("socket connected");
-    socket.emit("hello");
-
-    socket.on("message", (event) => {
-      socket.emit("message", event);
-    });
-
     socket.on("question", (q: string) => {
       console.log(`socket ${socket.id} asked a question: ${q}`);
       socket.emit("answer", `i don't know, but i'm a teapot`);
