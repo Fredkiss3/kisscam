@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node ./dist/index.js",
-    "test": "FORCE_COLOR=true jest --verbose --testPathPattern=./tests/",
+    "test": "FORCE_COLOR=true jest  --verbose --testPathPattern=./tests/",
+    "testw": "FORCE_COLOR=true jest --watch  --verbose --testPathPattern=./tests/",
     "dev": "nodemon src/index.ts"
   },
   "keywords": [],

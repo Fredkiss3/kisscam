@@ -1,4 +1,5 @@
 /// <reference types="jest" />
+
 import { MAX_INTERCONNECTED_CLIENTS, DB } from "./../src/lib/constants";
 import handlers from "../src/handlers";
 import { randomUUID } from "crypto";
@@ -27,12 +28,12 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       emit: emitMock,
       join: joinMock,
+      id: "socket-id", // socket id
     });
 
     // when
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-id",
       clientName: "client-name",
     });
 
@@ -40,7 +41,7 @@ describe(`App`, () => {
     const requestSents = DB.rooms["room-id"].connectionPairs.length;
     expect(requestSents).toBe(MAX_INTERCONNECTED_CLIENTS - 1);
     expect(emitMock.mock.calls).toHaveLength(MAX_INTERCONNECTED_CLIENTS - 1);
-    expect(emitMock.mock.calls[0][0]).toBe(`request-offer`);
+    expect(emitMock.mock.calls[0][0]).toBe(`client:offer-requested`);
   });
 
   it("Should join the socket to the room when the client requests to join a room", async () => {
@@ -58,12 +59,12 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       join: joinMock,
       emit: emitMock,
+      id: "socket-id", // socket id
     });
 
     // when
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-id",
       clientName: "client-name",
     });
 
@@ -73,18 +74,44 @@ describe(`App`, () => {
 
   it("Should create a room when a client requests it", async () => {
     // Given
-    const { onCreateRoom } = handlers({});
+    const { onCreateRoom } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      id: "socket-id", // socket id
+    });
 
     // when
     await onCreateRoom({
       roomId: "room-id",
       name: "room-name",
+      clientName: "client-name",
     });
 
     // then
     expect(DB.rooms["room-id"]).toBeDefined();
     expect(DB.rooms["room-id"].clients).not.toBeUndefined();
     expect(DB.rooms["room-id"].connectionPairs).not.toBeUndefined();
+  });
+
+  it("Should join the client to the created room when a client requests to create a room", async () => {
+    // Given
+    const { onCreateRoom } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      id: "socket-id", // socket id
+    });
+
+    // when
+    await onCreateRoom({
+      roomId: "room-id",
+      name: "room-name",
+      clientName: "client-name",
+    });
+
+    // then
+    // expect(DB.rooms["room-id"]).toBeDefined();
+    expect(DB.rooms["room-id"].clients).toBeDefined();
+    expect(Object.keys(DB.rooms["room-id"].clients)).toHaveLength(1);
   });
 
   it("Should update the connectionPair in the room when the peer send an offer", async () => {
@@ -119,6 +146,7 @@ describe(`App`, () => {
 
     const emitMock = jest.fn();
     const { onOffer } = handlers({
+      id: "socket-id", // socket id
       rooms: new Set([`socket-id`, `room-id`]),
       // @ts-ignore
       to: () => {
@@ -146,12 +174,6 @@ describe(`App`, () => {
       type: "offer",
     });
     expect(pair.initiator.iceCandidates).toHaveLength(1);
-    expect(emitMock).toHaveBeenCalledWith(`send-offer`, {
-      peerId: "peer-id",
-      sdpOffer: {
-        type: "offer",
-      },
-    });
   });
 
   it(`Should create offers answers when a client join a room and an initiator already exists`, async () => {
@@ -188,10 +210,10 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       join: jest.fn(),
       emit: jest.fn(),
+      id: "client-2", // socket id
     });
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-2",
       clientName: "jane",
     });
 
@@ -205,7 +227,7 @@ describe(`App`, () => {
     ).toBeDefined();
   });
 
-  it(`Should emit answer requests when offer to the room when an offer exists`, async () => {
+  it("Should emit `answer-requested` messages to the client when an offer exists", async () => {
     // Given
     const pairs: ConnectionPair[] = range(
       0,
@@ -213,11 +235,15 @@ describe(`App`, () => {
     ).map((i) => ({
       initiator: {
         clientId: "client-1",
-        id: randomUUID(),
+        id: `initiator`,
         sdpOffer: {
           type: "offer",
         },
-        iceCandidates: [],
+        iceCandidates: [
+          {
+            candidate: "candidate",
+          },
+        ],
       },
     }));
 
@@ -244,18 +270,28 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       join: jest.fn(),
       emit: emitMock,
+      id: "socket-2", // socket id
     });
 
     // when
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-2",
       clientName: "jane",
     });
 
     // then
-    expect(emitMock.mock.calls[0][0]).toBe(`send-answer-request`);
+    expect(emitMock.mock.calls[0][0]).toBe(`client:answer-requested`);
     expect(emitMock.mock.calls[0][1]).toHaveProperty(`peerId`);
+    expect(emitMock.mock.calls[0][1]).toMatchObject({
+      sdpOffer: {
+        type: "offer",
+      },
+      iceCandidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
   });
 
   it(`Should create only one offer answer when a client join a room and ${
@@ -296,10 +332,10 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       join: joinMock,
       emit: emitMock,
+      id: "client-2", // socket id
     });
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-2",
       clientName: "jane",
     });
 
@@ -363,16 +399,16 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       join: joinMock,
       emit: emitMock,
+      id: "socket-2", // socket id
     });
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-2",
       clientName: "jane",
     });
 
     // then
     expect(emitMock.mock.calls).toHaveLength(MAX_INTERCONNECTED_CLIENTS - 2);
-    expect(emitMock.mock.calls[0][0]).toBe(`request-offer`);
+    expect(emitMock.mock.calls[0][0]).toBe(`client:offer-requested`);
   });
 
   it("Should use all peers to create answers if there is enough initiators", async () => {
@@ -422,10 +458,10 @@ describe(`App`, () => {
     const { onJoinRoom } = handlers({
       join: jest.fn(),
       emit: jest.fn(),
+      id: "client-3", // socket id
     });
     await onJoinRoom({
       roomId: "room-id",
-      clientId: "client-3",
       clientName: "jasmine",
     });
 
@@ -438,5 +474,369 @@ describe(`App`, () => {
     // created an answer for the third initiator
     expect(pairs[2].responder).toBeDefined();
     expect(pairs[2].responder?.clientId).toBe("client-3");
+  });
+
+  it("Should update the connectionPair in the room when the responder send an answer", async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder`,
+          sdpAnswer: null,
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: range(0, MAX_INTERCONNECTED_CLIENTS - 1).map((i) => ({
+              id: `initiator-${i}`,
+              clientId: "client-1",
+            })),
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    const { onAnswer } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-2", "room-id"]),
+      id: "client-2", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+
+    // when
+    await onAnswer({
+      peerId: "responder",
+      sdpAnswer: {
+        type: "answer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+
+    // then
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].responder?.sdpAnswer).not.toBeNull();
+    expect(pairs[0].responder?.iceCandidates).toHaveLength(1);
+  });
+
+  it("Should emit `save-answer` request to the initiator client when an answer has been sent", async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder`,
+          sdpAnswer: null,
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const emitMock = jest.fn();
+    const toMock = jest.fn(() => ({
+      emit: emitMock,
+    }));
+    const { onAnswer } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-2", "room-id"]),
+      id: "client-2", // socket id
+      // @ts-ignore
+      to: toMock,
+    });
+    // when
+    await onAnswer({
+      peerId: "responder",
+      sdpAnswer: {
+        type: "answer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+
+    // then
+    expect(toMock).toBeCalledWith(`client-1`);
+    expect(emitMock.mock.calls).toHaveLength(1);
+    expect(emitMock.mock.calls[0][0]).toBe(`client:answer-sent`);
+    expect(emitMock.mock.calls[0][1]).toMatchObject({
+      peerId: "responder",
+      sdpAnswer: {
+        type: "answer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+  });
+
+  it("Should emit `offer-sent` to the room when the peer send an offer", async () => {
+    // Given
+    const pair = {
+      initiator: {
+        clientId: "client-id",
+        id: "peer-id",
+        sdpOffer: null,
+        iceCandidates: [],
+      },
+    };
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-id": {
+            id: "client-id",
+            name: "client-name",
+            peers: [
+              {
+                id: "peer-id",
+                clientId: "client-id",
+              },
+            ],
+          },
+        },
+        connectionPairs: [pair],
+      },
+    };
+
+    const emitMock = jest.fn();
+    const { onOffer } = handlers({
+      id: "socket-id", // socket id
+      rooms: new Set([`socket-id`, `room-id`]),
+      // @ts-ignore
+      to: () => {
+        return {
+          emit: emitMock,
+        };
+      },
+    });
+
+    // when
+    await onOffer({
+      peerId: "peer-id",
+      sdpOffer: {
+        type: "offer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+
+    // then
+    expect(emitMock).toHaveBeenCalledWith(`client:offer-sent`, {
+      peerId: "peer-id",
+      sdpOffer: {
+        type: "offer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+  });
+
+  it("Should not emit any messages when an offer is sent but the initiator does not exists", async () => {
+    // Given
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-id": {
+            id: "client-id",
+            name: "client-name",
+            peers: [
+              {
+                id: "peer-id",
+                clientId: "client-id",
+              },
+            ],
+          },
+        },
+        connectionPairs: [],
+      },
+    };
+
+    const emitMock = jest.fn();
+    const { onOffer } = handlers({
+      id: "socket-id", // socket id
+      rooms: new Set([`socket-id`, `room-id`]),
+      // @ts-ignore
+      to: () => {
+        return {
+          emit: emitMock,
+        };
+      },
+    });
+
+    // when
+    await onOffer({
+      peerId: "peer-id",
+      sdpOffer: {
+        type: "offer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+
+    // then
+    expect(emitMock).not.toBeCalled();
+  });
+
+  it("Should not emit any messages to the initiator client when an answer has been sent but the responder does exists", async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const emitMock = jest.fn();
+    const toMock = jest.fn(() => ({
+      emit: emitMock,
+    }));
+    const { onAnswer } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-2", "room-id"]),
+      id: "client-2", // socket id
+      // @ts-ignore
+      to: toMock,
+    });
+    // when
+    await onAnswer({
+      peerId: "responder",
+      sdpAnswer: {
+        type: "answer",
+      },
+      candidates: [
+        {
+          candidate: "candidate",
+        },
+      ],
+    });
+
+    // then
+    expect(emitMock).not.toBeCalled();
+    expect(toMock).not.toBeCalled();
   });
 });
