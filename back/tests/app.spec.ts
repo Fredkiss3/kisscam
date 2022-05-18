@@ -839,4 +839,92 @@ describe(`App`, () => {
     expect(emitMock).not.toBeCalled();
     expect(toMock).not.toBeCalled();
   });
+
+  it("Should remove all the connections to a client when it disconnects if the client is an iniator", async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder`,
+          sdpAnswer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const { onDisconnect } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-1", "room-id"]),
+      id: "client-1", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+    // when
+    await onDisconnect();
+
+    // then
+    // FIXME: this is not working
+    expect(DB.rooms[`room-id`].connectionPairs[0].initiator.clientId).not.toBe(
+      `client-1`
+    );
+    expect(Object.keys(DB.rooms[`room-id`].clients)).toHaveLength(1);
+    expect(DB.rooms[`room-id`].clients).not.toHaveProperty(`client-1`);
+  });
+
+  it.todo(`Should empty the room when the last client disconnects`);
+  it.todo(
+    `Should emit a message to all the initiators connected to the client when the responder disconnects`
+  );
 });

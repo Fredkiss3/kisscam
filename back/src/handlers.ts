@@ -187,12 +187,39 @@ export default function (socket: Partial<Socket>) {
     }
   };
 
-  // onDisconnect
+  const onDisconnect = async function () {
+    const id = io.id;
+    const roomId = [...io.rooms!][1];
+
+    const room = DB.rooms[roomId];
+
+    const newPairs = room.connectionPairs
+      .map((pair) => {
+        const { responder, initiator } = pair;
+
+        if (initiator.clientId === id) {
+          return undefined;
+        }
+
+        return pair;
+      })
+      .filter(Boolean) as ConnectionPair[];
+
+    room.connectionPairs = newPairs;
+
+    // remove the client from the room
+    delete room.clients[id];
+
+    // if (Object.keys(room.clients).length === 0) {
+    //   delete DB.rooms[roomId];
+    // }
+  };
 
   return {
     onCreateRoom,
     onJoinRoom,
     onOffer,
     onAnswer,
+    onDisconnect,
   };
 }
