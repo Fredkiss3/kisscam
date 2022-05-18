@@ -9,19 +9,21 @@ export type Client = {
   peers: Peer[];
 };
 
+export type ConnectionPair = {
+  initiator: Peer & {
+    sdpOffer: object | null;
+    iceCandidates: Array<object>; // {key: value}
+  };
+  responder?: Peer & {
+    sdpAnswer: object | null;
+    iceCandidates: Array<object>; // {key: value}s
+  };
+};
+
 export type Room = {
   name: string;
   clients: Record<string, Client>; // id => client
-  connectionPairs: Array<{
-    initiator: Peer & {
-      sdpOffer: object | null;
-      iceCandidates: Array<Record<string, string>>; // {key: value}
-    };
-    responder?: Peer & {
-      sdpAnswer: object | null;
-      iceCandidates: Array<Record<string, string>>; // {key: value}s
-    };
-  }>;
+  connectionPairs: Array<ConnectionPair>;
 };
 
 export type Database = {
