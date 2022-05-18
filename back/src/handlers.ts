@@ -1,4 +1,4 @@
-import { Room } from "./lib/types";
+import { ConnectionPair, Room } from "./lib/types";
 import { DB, MAX_INTERCONNECTED_CLIENTS } from "./lib/constants";
 import { randomUUID } from "crypto";
 import type { Socket } from "socket.io";
@@ -7,29 +7,36 @@ export default function (socket: Partial<Socket>) {
   // the socket is always connected
   const io = socket as Socket;
 
-  const onCreateRoom = async function (data: { roomId: string; name: string }) {
-    const { roomId, name } = data;
-    const room: Room = {
+  const onCreateRoom = async function ({
+    roomId,
+    name,
+    clientName,
+  }: {
+    roomId: string;
+    name: string;
+    clientName: string;
+  }) {
+    DB.rooms[roomId] = {
       name,
       clients: {},
       connectionPairs: [],
     };
-    DB.rooms[roomId] = room;
+
+    onJoinRoom({ roomId, clientName });
   };
 
   const onJoinRoom = async function ({
     roomId,
-    clientId,
     clientName,
   }: {
     roomId: string;
-    clientId: string;
     clientName: string;
   }) {
     // join the socket to the room
     io.join(roomId);
 
     const room = DB.rooms[roomId];
+    const clientId = io.id;
 
     room.clients[clientId] = {
       id: clientId,
@@ -43,7 +50,7 @@ export default function (socket: Partial<Socket>) {
         const peerId = randomUUID();
 
         // send request offer
-        io.emit("request-offer", {
+        io.emit("client:offer-requested", {
           peerId,
         });
 
@@ -80,8 +87,10 @@ export default function (socket: Partial<Socket>) {
 
           // send request offer
           if (currentPair.initiator.sdpOffer !== null) {
-            io.emit(`send-answer-request`, {
+            io.emit(`client:answer-requested`, {
               peerId,
+              sdpOffer: currentPair.initiator.sdpOffer,
+              iceCandidates: currentPair.initiator.iceCandidates,
             });
           }
 
@@ -102,7 +111,7 @@ export default function (socket: Partial<Socket>) {
         const peerId = randomUUID();
 
         // send request offer
-        io.emit("request-offer", {
+        io.emit("client:offer-requested", {
           peerId,
         });
 
@@ -135,23 +144,55 @@ export default function (socket: Partial<Socket>) {
 
     const connectionPair = room.connectionPairs.find(
       ({ initiator }) => initiator.id === peerId && initiator.sdpOffer === null
-    )!;
+    );
 
-    connectionPair.initiator.sdpOffer = sdpOffer;
-    connectionPair.initiator.iceCandidates = candidates;
+    if (connectionPair) {
+      connectionPair.initiator.sdpOffer = sdpOffer;
+      connectionPair.initiator.iceCandidates = candidates;
 
-    io.to(roomId).emit("send-offer", {
-      peerId,
-      sdpOffer,
-    });
+      io.to(roomId).emit("client:offer-sent", {
+        peerId,
+        sdpOffer,
+        candidates,
+      });
+    }
   };
 
-  // onAnswer
+  const onAnswer = async ({
+    peerId,
+    sdpAnswer,
+    candidates,
+  }: {
+    peerId: string;
+    sdpAnswer: object;
+    candidates: object[];
+  }) => {
+    const roomId = [...io.rooms!][1];
+    const room = DB.rooms[roomId];
+
+    const connectionPair = room.connectionPairs.find(
+      ({ responder }) =>
+        responder?.id === peerId && responder.sdpAnswer === null
+    ) as Required<ConnectionPair> | undefined;
+
+    if (connectionPair) {
+      connectionPair.responder.sdpAnswer = sdpAnswer;
+
+      // send answer to the initiator
+      io.to(connectionPair.initiator.clientId).emit("client:answer-sent", {
+        peerId,
+        sdpAnswer,
+        candidates,
+      });
+    }
+  };
+
   // onDisconnect
 
   return {
     onCreateRoom,
     onJoinRoom,
     onOffer,
+    onAnswer,
   };
 }
