@@ -29,3 +29,31 @@ export type Room = {
 export type Database = {
   rooms: Record<string, Room>; // id => room
 };
+
+export enum SocketClientEvent {
+  OfferRequested = "client:offer-requested",
+  AnswerRequested = "client:answer-requested",
+  OfferSent = "client:offer-sent",
+  AnswerSent = "client:answer-sent",
+  Disconnected = "client:disconnected",
+}
+
+export interface EventMap {
+  [SocketClientEvent.OfferRequested]: (arg: { peerId: string }) => void;
+  [SocketClientEvent.AnswerRequested]: (arg: {
+    peerId: string;
+    sdpOffer: object;
+    iceCandidates: object[];
+  }) => void;
+  [SocketClientEvent.OfferSent]: (arg: {
+    peerId: string;
+    sdpOffer: object;
+    candidates: object[];
+  }) => void;
+  [SocketClientEvent.AnswerSent]: (arg: {
+    peerId: string;
+    sdpAnswer: object;
+    candidates: object[];
+  }) => void;
+  [SocketClientEvent.Disconnected]: (disconnectedPeerIds: string[]) => void;
+}

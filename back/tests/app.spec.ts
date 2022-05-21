@@ -4,7 +4,7 @@ import { MAX_INTERCONNECTED_CLIENTS, DB } from "./../src/lib/constants";
 import handlers from "../src/handlers";
 import { randomUUID } from "crypto";
 import { range } from "../src/lib/functions";
-import { ConnectionPair } from "../src/lib/types";
+import { ConnectionPair, SocketClientEvent } from "../src/lib/types";
 
 describe(`App`, () => {
   beforeEach(() => {
@@ -41,7 +41,7 @@ describe(`App`, () => {
     const requestSents = DB.rooms["room-id"].connectionPairs.length;
     expect(requestSents).toBe(MAX_INTERCONNECTED_CLIENTS - 1);
     expect(emitMock.mock.calls).toHaveLength(MAX_INTERCONNECTED_CLIENTS - 1);
-    expect(emitMock.mock.calls[0][0]).toBe(`client:offer-requested`);
+    expect(emitMock.mock.calls[0][0]).toBe(SocketClientEvent.OfferRequested);
   });
 
   it("Should join the socket to the room when the client requests to join a room", async () => {
@@ -280,7 +280,7 @@ describe(`App`, () => {
     });
 
     // then
-    expect(emitMock.mock.calls[0][0]).toBe(`client:answer-requested`);
+    expect(emitMock.mock.calls[0][0]).toBe(SocketClientEvent.AnswerRequested);
     expect(emitMock.mock.calls[0][1]).toHaveProperty(`peerId`);
     expect(emitMock.mock.calls[0][1]).toMatchObject({
       sdpOffer: {
@@ -408,7 +408,7 @@ describe(`App`, () => {
 
     // then
     expect(emitMock.mock.calls).toHaveLength(MAX_INTERCONNECTED_CLIENTS - 2);
-    expect(emitMock.mock.calls[0][0]).toBe(`client:offer-requested`);
+    expect(emitMock.mock.calls[0][0]).toBe(SocketClientEvent.OfferRequested);
   });
 
   it("Should use all peers to create answers if there is enough initiators", async () => {
@@ -631,7 +631,7 @@ describe(`App`, () => {
     // then
     expect(toMock).toBeCalledWith(`client-1`);
     expect(emitMock.mock.calls).toHaveLength(1);
-    expect(emitMock.mock.calls[0][0]).toBe(`client:answer-sent`);
+    expect(emitMock.mock.calls[0][0]).toBe(SocketClientEvent.AnswerSent);
     expect(emitMock.mock.calls[0][1]).toMatchObject({
       peerId: "responder",
       sdpAnswer: {
@@ -701,7 +701,7 @@ describe(`App`, () => {
     });
 
     // then
-    expect(emitMock).toHaveBeenCalledWith(`client:offer-sent`, {
+    expect(emitMock).toHaveBeenCalledWith(SocketClientEvent.OfferSent, {
       peerId: "peer-id",
       sdpOffer: {
         type: "offer",
@@ -869,6 +869,20 @@ describe(`App`, () => {
           ],
         },
       },
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
     ];
 
     DB.rooms = {
@@ -912,19 +926,592 @@ describe(`App`, () => {
       }),
     });
     // when
-    await onDisconnect();
+    await onDisconnect({
+      roomId: "room-id",
+      server: {
+        // @ts-ignore
+        to: () => {
+          return {
+            emit: jest.fn(),
+          };
+        },
+        sockets: {
+          // @ts-ignore
+          in: () => ({
+            emit: jest.fn(),
+          }),
+        },
+      },
+    });
 
     // then
-    // FIXME: this is not working
-    expect(DB.rooms[`room-id`].connectionPairs[0].initiator.clientId).not.toBe(
-      `client-1`
+    // we check that all the connections with the client-1 as the initiator have been removed
+    expect(DB.rooms[`room-id`].connectionPairs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          initiator: expect.objectContaining({
+            clientId: "client-1",
+          }),
+        }),
+      ])
     );
-    expect(Object.keys(DB.rooms[`room-id`].clients)).toHaveLength(1);
     expect(DB.rooms[`room-id`].clients).not.toHaveProperty(`client-1`);
   });
 
-  it.todo(`Should empty the room when the last client disconnects`);
-  it.todo(
-    `Should emit a message to all the initiators connected to the client when the responder disconnects`
-  );
+  it(`Should set all the responders that are where connected to an initiator to initiator when the initiator disconnects`, async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder`,
+          sdpAnswer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const { onDisconnect } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-1", "room-id"]),
+      id: "client-1", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+    // when
+    await onDisconnect({
+      roomId: "room-id",
+      server: {
+        // @ts-ignore
+        to: () => {
+          return {
+            emit: jest.fn(),
+          };
+        },
+        sockets: {
+          // @ts-ignore
+          in: () => ({
+            emit: jest.fn(),
+          }),
+        },
+      },
+    });
+
+    // then
+    expect(DB.rooms[`room-id`].connectionPairs[0]).toMatchObject({
+      initiator: {
+        clientId: "client-2",
+        id: `responder`,
+        sdpOffer: null,
+        iceCandidates: [],
+      },
+    });
+  });
+
+  it(`Should emit a 'disconnected' message to all the clients when anyone disconnects`, async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder`,
+          sdpAnswer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+      {
+        initiator: {
+          clientId: "client-2",
+          id: `initiator-2`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-1",
+          id: `responder-2`,
+          sdpAnswer: {
+            type: "answer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator`,
+                clientId: "client-1",
+              },
+              {
+                id: `responder-2`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const emitMock = jest.fn();
+    const { onDisconnect } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-1", "room-id"]),
+      id: "client-1", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+
+    // when
+    await onDisconnect({
+      roomId: "room-id",
+      server: {
+        // @ts-ignore
+        to: () => {
+          return {
+            emit: jest.fn(),
+          };
+        },
+        sockets: {
+          // @ts-ignore
+          in: () => ({
+            emit: emitMock,
+          }),
+        },
+      },
+    });
+
+    // then
+    expect(emitMock.mock.calls).toHaveLength(1);
+    expect(emitMock.mock.calls[0][0]).toBe(SocketClientEvent.Disconnected);
+    expect(emitMock.mock.calls[0][1]).toEqual([`initiator`, `responder-2`]);
+  });
+
+  it(`Should delete the room when the last client disconnects`, async () => {
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [],
+          },
+        },
+        connectionPairs: [],
+      },
+    };
+
+    // when
+    const { onDisconnect } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      rooms: new Set(["client-1", "room-id"]),
+      id: "client-1", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+
+    // when
+    await onDisconnect({
+      roomId: "room-id",
+      server: {
+        // @ts-ignore
+        to: () => {
+          return {
+            emit: jest.fn(),
+          };
+        },
+        sockets: {
+          // @ts-ignore
+          in: () => ({
+            emit: jest.fn(),
+          }),
+        },
+      },
+    });
+
+    // then
+    expect(DB.rooms[`room-id`]).toBeUndefined();
+  });
+
+  it(`Should emit a 'create-offer' message to all the responders that are were connected to an initiator when the responders are turned to initiators`, async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator-1`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder-1`,
+          sdpAnswer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+      {
+        initiator: {
+          clientId: "client-2",
+          id: `initiator-2`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-1",
+          id: `responder-2`,
+          sdpAnswer: {
+            type: "answer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator-1`,
+                clientId: "client-1",
+              },
+              {
+                id: `responder-2`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder-1`,
+                clientId: "client-2",
+              },
+              {
+                id: `initiator-2`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const emitMock = jest.fn();
+    const toMock = jest.fn(() => {
+      return {
+        emit: emitMock,
+      };
+    });
+    const { onDisconnect } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      id: "client-1", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+
+    // when
+    await onDisconnect({
+      roomId: "room-id",
+      server: {
+        // @ts-ignore
+        to: toMock,
+        sockets: {
+          // @ts-ignore
+          in: () => ({
+            emit: jest.fn(),
+          }),
+        },
+      },
+    });
+
+    // then
+    // called only once
+    expect(toMock.mock.calls).toHaveLength(1);
+    expect(emitMock.mock.calls).toHaveLength(1);
+
+    expect(toMock).toBeCalledWith(`client-2`);
+
+    // contain all the responders that were connected to the initiator
+    expect(emitMock).toBeCalledWith(SocketClientEvent.OfferRequested, {
+      peerId: `responder-1`,
+    });
+  });
+
+  it(`Should remove all the responders that correspond to a client that disconnected`, async () => {
+    // Given
+    const pairs: ConnectionPair[] = [
+      {
+        initiator: {
+          clientId: "client-1",
+          id: `initiator-1`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+        responder: {
+          clientId: "client-2",
+          id: `responder-1`,
+          sdpAnswer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+      {
+        initiator: {
+          clientId: "client-2",
+          id: `initiator-2`,
+          sdpOffer: {
+            type: "offer",
+          },
+          iceCandidates: [
+            {
+              candidate: "candidate",
+            },
+          ],
+        },
+      },
+    ];
+
+    DB.rooms = {
+      "room-id": {
+        name: "room-id",
+        clients: {
+          "client-1": {
+            id: "client-1",
+            name: "john",
+            peers: [
+              {
+                id: `initiator-1`,
+                clientId: "client-1",
+              },
+              {
+                id: `responder-2`,
+                clientId: "client-1",
+              },
+            ],
+          },
+          "client-2": {
+            id: "client-2",
+            name: "jane",
+            peers: [
+              {
+                id: `responder-1`,
+                clientId: "client-2",
+              },
+              {
+                id: `initiator-2`,
+                clientId: "client-2",
+              },
+            ],
+          },
+        },
+        connectionPairs: pairs,
+      },
+    };
+
+    // when
+    const { onDisconnect } = handlers({
+      join: jest.fn(),
+      emit: jest.fn(),
+      id: "client-2", // socket id
+      // @ts-ignore
+      to: () => ({
+        emit: jest.fn(),
+      }),
+    });
+
+    // when
+    await onDisconnect({
+      roomId: "room-id",
+      server: {
+        // @ts-ignore
+        to: () => ({
+          emit: jest.fn(),
+        }),
+        sockets: {
+          // @ts-ignore
+          in: () => ({
+            emit: jest.fn(),
+          }),
+        },
+      },
+    });
+
+    // then
+    expect(DB.rooms["room-id"].connectionPairs).toHaveLength(1);
+    // we check that all the connections with the client-2 as the initiator have been removed
+    expect(DB.rooms[`room-id`].connectionPairs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          responder: expect.objectContaining({
+            clientId: "client-2",
+          }),
+        }),
+      ])
+    );
+    expect(DB.rooms[`room-id`].clients).not.toHaveProperty(`client-2`);
+  });
 });
