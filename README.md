@@ -8,7 +8,7 @@
 # DPKISS Call 😎
 
 
-![Build Status Back](https://github.com/Fredkiss3/dpkiss-call/workflows/Continous%20Integration%20For%Backend/badge.svg?branch=main)
+![Build Status Back](https://github.com/Fredkiss3/dpkiss-call/workflows/Continous%20Integration%20For%20Backend/badge.svg?branch=main)
 <!-- ![Build Status Front](https://github.com/Fredkiss3/dpkiss-call/workflows/CI%2FCD%20For%20the%20Frontend/badge.svg?branch=main) -->
 
 DPKISS Call is a web application that allows you to call your friends and family for how much time you want.
