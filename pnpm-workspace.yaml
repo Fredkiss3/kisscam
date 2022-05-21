@@ -1,3 +1,4 @@
 packages:
   - "front/**"
   - "back/**"
+  - "shared/**"
