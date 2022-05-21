@@ -84,6 +84,13 @@ describe(`App`, () => {
         expect(joinMock).toHaveBeenCalledWith(`room-id`);
     });
 
+    it.todo(
+        'Should emit `room-joined` message to the room when the client joins a room'
+    );
+    it.todo(
+        `Should send 'room does not exists' message when the room does not exists`
+    );
+
     it('Should create a room when a client requests it', async () => {
         // Given
         DB.rooms = {};
