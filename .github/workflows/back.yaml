@@ -8,7 +8,7 @@ on:
   push:
     paths:
       - "back/**"
-      - .github/workflows/back.yml
+      - .github/workflows/back.yaml
     branches:
       - main
 
