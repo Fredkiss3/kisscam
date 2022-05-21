@@ -36,6 +36,7 @@ export enum SocketClientEvent {
   OfferSent = "client:offer-sent",
   AnswerSent = "client:answer-sent",
   Disconnected = "client:disconnected",
+  RoomCreated = "client:room-created",
 }
 
 export interface EventMap {
@@ -56,4 +57,5 @@ export interface EventMap {
     candidates: object[];
   }) => void;
   [SocketClientEvent.Disconnected]: (disconnectedPeerIds: string[]) => void;
+  [SocketClientEvent.RoomCreated]: (arg: { roomId: string }) => void;
 }

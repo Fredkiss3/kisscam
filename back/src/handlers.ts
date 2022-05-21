@@ -7,22 +7,16 @@ export default function (socket: Partial<Socket>) {
   // the socket is always connected
   const io = socket as Socket<EventMap>;
 
-  const onCreateRoom = async function ({
-    roomId,
-    name,
-    clientName,
-  }: {
-    roomId: string;
-    name: string;
-    clientName: string;
-  }) {
+  const onCreateRoom = async function (roomName: string) {
+    const roomId = randomUUID();
+
     DB.rooms[roomId] = {
-      name,
+      name: roomName,
       clients: {},
       connectionPairs: [],
     };
 
-    onJoinRoom({ roomId, clientName });
+    io.emit(SocketClientEvent.RoomCreated, { roomId });
   };
 
   const onJoinRoom = async function ({

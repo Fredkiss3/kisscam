@@ -74,6 +74,7 @@ describe(`App`, () => {
 
   it("Should create a room when a client requests it", async () => {
     // Given
+    DB.rooms = {};
     const { onCreateRoom } = handlers({
       join: jest.fn(),
       emit: jest.fn(),
@@ -81,37 +82,30 @@ describe(`App`, () => {
     });
 
     // when
-    await onCreateRoom({
-      roomId: "room-id",
-      name: "room-name",
-      clientName: "client-name",
-    });
+    await onCreateRoom(`New room`);
 
     // then
-    expect(DB.rooms["room-id"]).toBeDefined();
-    expect(DB.rooms["room-id"].clients).not.toBeUndefined();
-    expect(DB.rooms["room-id"].connectionPairs).not.toBeUndefined();
+    expect(Object.keys(DB.rooms)).toHaveLength(1);
   });
 
-  it("Should join the client to the created room when a client requests to create a room", async () => {
+  it("Should emit `room-created` message to the client that created the room", async () => {
     // Given
+    DB.rooms = {};
+
+    const emitMock = jest.fn();
     const { onCreateRoom } = handlers({
       join: jest.fn(),
-      emit: jest.fn(),
-      id: "socket-id", // socket id
+      emit: emitMock,
+      id: "client-id", // socket id
     });
 
     // when
-    await onCreateRoom({
-      roomId: "room-id",
-      name: "room-name",
-      clientName: "client-name",
-    });
+    await onCreateRoom(`New room`);
 
     // then
-    // expect(DB.rooms["room-id"]).toBeDefined();
-    expect(DB.rooms["room-id"].clients).toBeDefined();
-    expect(Object.keys(DB.rooms["room-id"].clients)).toHaveLength(1);
+    expect(emitMock).toBeCalledWith(SocketClientEvent.RoomCreated, {
+      roomId: expect.any(String),
+    });
   });
 
   it("Should update the connectionPair in the room when the peer send an offer", async () => {
