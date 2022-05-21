@@ -126,6 +126,9 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             }
         }
 
+        console.log(
+            `${clientName} joined room the room : ${DB.rooms[roomId].name} (${roomId})`
+        );
         return;
     };
 
@@ -256,6 +259,10 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                     });
             }
         });
+
+        console.log(
+            `${room.clients[id].name} left the room : ${DB.rooms[roomId].name} (${roomId})`
+        );
 
         // remove the client from the room
         delete room.clients[id];

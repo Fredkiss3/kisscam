@@ -19,10 +19,8 @@ server.register(cors, () => {
 // register the socket.io plugin
 server.register(fastifyIO);
 
+// we need to wait for the server to be ready, else `server.io` is undefined
 server.ready().then(() => {
-    // we need to wait for the server to be ready, else `server.io` is undefined
-    console.log('server ready');
-
     server.io.on('connection', (socket: Socket<ServerEventMap>) => {
         const { onAnswer, onCreateRoom, onDisconnect, onJoinRoom, onOffer } =
             handlers(socket, server.io);
