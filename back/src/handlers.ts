@@ -1,11 +1,11 @@
-import { ConnectionPair, Room } from "./lib/types";
+import { ConnectionPair, EventMap, Room, SocketClientEvent } from "./lib/types";
 import { DB, MAX_INTERCONNECTED_CLIENTS } from "./lib/constants";
 import { randomUUID } from "crypto";
-import type { Socket } from "socket.io";
+import type { Server, Socket } from "socket.io";
 
 export default function (socket: Partial<Socket>) {
   // the socket is always connected
-  const io = socket as Socket;
+  const io = socket as Socket<EventMap>;
 
   const onCreateRoom = async function ({
     roomId,
@@ -50,7 +50,7 @@ export default function (socket: Partial<Socket>) {
         const peerId = randomUUID();
 
         // send request offer
-        io.emit("client:offer-requested", {
+        io.emit(SocketClientEvent.OfferRequested, {
           peerId,
         });
 
@@ -87,7 +87,7 @@ export default function (socket: Partial<Socket>) {
 
           // send request offer
           if (currentPair.initiator.sdpOffer !== null) {
-            io.emit(`client:answer-requested`, {
+            io.emit(SocketClientEvent.AnswerRequested, {
               peerId,
               sdpOffer: currentPair.initiator.sdpOffer,
               iceCandidates: currentPair.initiator.iceCandidates,
@@ -111,7 +111,7 @@ export default function (socket: Partial<Socket>) {
         const peerId = randomUUID();
 
         // send request offer
-        io.emit("client:offer-requested", {
+        io.emit(SocketClientEvent.OfferRequested, {
           peerId,
         });
 
@@ -150,7 +150,7 @@ export default function (socket: Partial<Socket>) {
       connectionPair.initiator.sdpOffer = sdpOffer;
       connectionPair.initiator.iceCandidates = candidates;
 
-      io.to(roomId).emit("client:offer-sent", {
+      io.to(roomId).emit(SocketClientEvent.OfferSent, {
         peerId,
         sdpOffer,
         candidates,
@@ -179,40 +179,90 @@ export default function (socket: Partial<Socket>) {
       connectionPair.responder.sdpAnswer = sdpAnswer;
 
       // send answer to the initiator
-      io.to(connectionPair.initiator.clientId).emit("client:answer-sent", {
-        peerId,
-        sdpAnswer,
-        candidates,
-      });
+      io.to(connectionPair.initiator.clientId).emit(
+        SocketClientEvent.AnswerSent,
+        {
+          peerId,
+          sdpAnswer,
+          candidates,
+        }
+      );
     }
   };
 
-  const onDisconnect = async function () {
-    const id = io.id;
-    const roomId = [...io.rooms!][1];
+  const onDisconnect = async function ({
+    roomId,
+    server,
+  }: {
+    roomId: string;
+    server: Partial<Server>;
+  }) {
+    const socketServer = server as Server<EventMap>;
 
+    const id = io.id;
     const room = DB.rooms[roomId];
 
+    const deletedPairs: ConnectionPair[] = [];
     const newPairs = room.connectionPairs
       .map((pair) => {
         const { responder, initiator } = pair;
 
         if (initiator.clientId === id) {
+          deletedPairs.push(pair);
           return undefined;
+        } else if (responder?.clientId === id) {
+          // remove responder without removing the pair
+          return {
+            initiator,
+          };
         }
 
         return pair;
       })
       .filter(Boolean) as ConnectionPair[];
 
+    // pass all the responders to initiators
+    deletedPairs.forEach(({ responder }) => {
+      if (responder) {
+        newPairs.push({
+          initiator: {
+            clientId: responder.clientId,
+            id: responder.id,
+            sdpOffer: null,
+            iceCandidates: [],
+          },
+        });
+      }
+    });
+
     room.connectionPairs = newPairs;
+
+    // send disconnected event to all the clients in the room
+    const clientPeers = room.clients[id]?.peers || [];
+    socketServer.sockets
+      .in(roomId)
+      .emit(SocketClientEvent.Disconnected, [
+        ...clientPeers.map(({ id }) => id),
+      ]);
+
+    // send offer request to all the clients that were passed as initiators
+    deletedPairs.forEach((pair) => {
+      if (pair.responder) {
+        socketServer
+          .to(pair.responder.clientId)
+          .emit(SocketClientEvent.OfferRequested, {
+            peerId: pair.responder.id,
+          });
+      }
+    });
 
     // remove the client from the room
     delete room.clients[id];
 
-    // if (Object.keys(room.clients).length === 0) {
-    //   delete DB.rooms[roomId];
-    // }
+    // if there is no more clients connected, delete the room
+    if (Object.keys(room.clients).length === 0) {
+      delete DB.rooms[roomId];
+    }
   };
 
   return {
