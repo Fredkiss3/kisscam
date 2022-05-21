@@ -1,6 +1,6 @@
 import { ConnectionPair } from './lib/types';
 import { DB, MAX_INTERCONNECTED_CLIENTS } from './lib/constants';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 import type { Server, Socket } from 'socket.io';
 
 import { SocketClientEvent, ClientEventMap } from '@dpkiss-call/shared';
@@ -11,7 +11,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
     const socketServer = server as Server<ClientEventMap>;
 
     const onCreateRoom = async function (roomName: string) {
-        const roomId = randomUUID();
+        const roomId = randomBytes(5).toString('hex');
 
         DB.rooms[roomId] = {
             name: roomName,
@@ -19,7 +19,8 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             connectionPairs: [],
         };
 
-        io.emit(SocketClientEvent.RoomCreated, { roomId });
+        io.emit(SocketClientEvent.RoomCreated, { roomId, roomName });
+        console.log('Room created:', { roomId, roomName });
     };
 
     const onJoinRoom = async function ({
@@ -31,6 +32,15 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
     }) {
         // join the socket to the room
         io.join(roomId);
+
+        console.dir(
+            {
+                DB,
+                roomId,
+                clientName,
+            },
+            { depth: null }
+        );
 
         const room = DB.rooms[roomId];
         const clientId = io.id;
