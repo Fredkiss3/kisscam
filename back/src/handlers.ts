@@ -190,9 +190,18 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         }
     };
 
-    const onDisconnect = async function ({ roomId }: { roomId: string }) {
+    const onDisconnect = async function () {
         const id = io.id;
-        const room = DB.rooms[roomId];
+
+        const result = Object.entries(DB.rooms).find(
+            ([, { clients }]) => id in clients
+        );
+
+        if (!result) {
+            return;
+        }
+
+        const [roomId, room] = result;
 
         const deletedPairs: ConnectionPair[] = [];
         const newPairs = room.connectionPairs

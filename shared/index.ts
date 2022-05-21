@@ -33,7 +33,6 @@ export enum SocketServerEvent {
     JoinRoom = 'server:join-room',
     SendOffer = 'server:send-offer',
     SendAnswer = 'server:send-answer',
-    Disconnected = 'server:disconnected',
 }
 
 export interface ServerEventMap {
@@ -52,5 +51,4 @@ export interface ServerEventMap {
         sdpAnswer: object;
         candidates: object[];
     }) => void;
-    [SocketServerEvent.Disconnected]: (arg: { roomId: string }) => void;
 }
