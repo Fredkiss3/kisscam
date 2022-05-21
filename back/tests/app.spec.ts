@@ -997,9 +997,7 @@ describe(`App`, () => {
             }
         );
         // when
-        await onDisconnect({
-            roomId: 'room-id',
-        });
+        await onDisconnect();
 
         // then
         // we check that all the connections with the client-1 as the initiator have been removed
@@ -1117,9 +1115,7 @@ describe(`App`, () => {
             }
         );
         // when
-        await onDisconnect({
-            roomId: 'room-id',
-        });
+        await onDisconnect();
 
         // then
         expect(DB.rooms[`room-id`].connectionPairs[0]).toMatchObject({
@@ -1252,9 +1248,7 @@ describe(`App`, () => {
         );
 
         // when
-        await onDisconnect({
-            roomId: 'room-id',
-        });
+        await onDisconnect();
 
         // then
         expect(emitMock.mock.calls).toHaveLength(1);
@@ -1306,9 +1300,7 @@ describe(`App`, () => {
         );
 
         // when
-        await onDisconnect({
-            roomId: 'room-id',
-        });
+        await onDisconnect();
 
         // then
         expect(DB.rooms[`room-id`]).toBeUndefined();
@@ -1438,9 +1430,7 @@ describe(`App`, () => {
         );
 
         // when
-        await onDisconnect({
-            roomId: 'room-id',
-        });
+        await onDisconnect();
 
         // then
         // called only once
@@ -1563,9 +1553,7 @@ describe(`App`, () => {
         );
 
         // when
-        await onDisconnect({
-            roomId: 'room-id',
-        });
+        await onDisconnect();
 
         // then
         expect(DB.rooms['room-id'].connectionPairs).toHaveLength(1);
