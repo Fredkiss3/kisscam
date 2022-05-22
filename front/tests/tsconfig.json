@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "target": "esnext"
+    },
+    "include": ["./*.spec.ts", "./playwright.config.ts"],
+    "exclude": ["node_modules"]
+}
