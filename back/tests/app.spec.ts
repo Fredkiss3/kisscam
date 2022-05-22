@@ -1409,8 +1409,15 @@ describe(`App`, () => {
 
         // then
         expect(emitMock.mock.calls).toHaveLength(1);
-        expect(emitMock.mock.calls[0][0]).toBe(SocketClientEvent.Disconnected);
-        expect(emitMock.mock.calls[0][1]).toEqual([`initiator`, `responder-2`]);
+        expect(emitMock.mock.calls[0]).toEqual(
+            expect.arrayContaining([
+                SocketClientEvent.Disconnected,
+                {
+                    clientId: 'client-1',
+                    peerIds: ['initiator', 'responder-2'],
+                },
+            ])
+        );
     });
 
     it(`Should delete the room when the last client disconnects`, async () => {

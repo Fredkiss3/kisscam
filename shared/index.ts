@@ -27,7 +27,10 @@ export interface ClientEventMap {
         sdpAnswer: object;
         candidates: object[];
     }) => void;
-    [SocketClientEvent.Disconnected]: (disconnectedPeerIds: string[]) => void;
+    [SocketClientEvent.Disconnected]: (arg: {
+        clientId: string;
+        peerIds: string[];
+    }) => void;
     [SocketClientEvent.RoomCreated]: (arg: {
         roomId: string;
         roomName: string;

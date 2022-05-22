@@ -206,14 +206,13 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             connectionPair.responder.sdpAnswer = sdpAnswer;
 
             // send answer to the initiator
-            clientSocket.to(connectionPair.initiator.clientId).emit(
-                SocketClientEvent.AnswerSent,
-                {
+            clientSocket
+                .to(connectionPair.initiator.clientId)
+                .emit(SocketClientEvent.AnswerSent, {
                     peerId,
                     sdpAnswer,
                     candidates,
-                }
-            );
+                });
         }
     };
 
@@ -267,11 +266,10 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
 
         // send disconnected event to all the clients in the room
         const clientPeers = room.clients[id]?.peers || [];
-        serverSocket.sockets
-            .in(roomId)
-            .emit(SocketClientEvent.Disconnected, [
-                ...clientPeers.map(({ id }) => id),
-            ]);
+        serverSocket.sockets.in(roomId).emit(SocketClientEvent.Disconnected, {
+            clientId: id,
+            peerIds: clientPeers.map(({ id }) => id),
+        });
 
         // send offer request to all the clients that were passed as initiators
         deletedPairs.forEach((pair) => {
