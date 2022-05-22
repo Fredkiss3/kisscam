@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import { MAX_INTERCONNECTED_CLIENTS, DB } from './../src/lib/constants';
+import { MAX_INTERCONNECTED_CLIENTS, DB } from '../src/lib/constants';
 import handlers from '../src/handlers';
 import { randomUUID } from 'crypto';
 import { range } from '../src/lib/functions';
@@ -26,12 +26,17 @@ describe(`App`, () => {
         };
 
         const emitMock = jest.fn();
-        const joinMock = jest.fn();
         const { onJoinRoom } = handlers(
             {
                 emit: emitMock,
-                join: joinMock,
+                join: jest.fn(),
                 id: 'socket-id', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );
@@ -46,7 +51,7 @@ describe(`App`, () => {
         const requestSents = DB.rooms['room-id'].connectionPairs.length;
         expect(requestSents).toBe(MAX_INTERCONNECTED_CLIENTS - 1);
         expect(emitMock.mock.calls).toHaveLength(
-            MAX_INTERCONNECTED_CLIENTS - 1
+            MAX_INTERCONNECTED_CLIENTS // request offer sent to all clients and one last for the client that joins
         );
         expect(emitMock.mock.calls[0][0]).toBe(
             SocketClientEvent.OfferRequested
@@ -55,7 +60,6 @@ describe(`App`, () => {
 
     it('Should join the socket to the room when the client requests to join a room', async () => {
         // Given
-        const emitMock = jest.fn();
         const joinMock = jest.fn();
         DB.rooms = {
             'room-id': {
@@ -68,8 +72,14 @@ describe(`App`, () => {
         const { onJoinRoom } = handlers(
             {
                 join: joinMock,
-                emit: emitMock,
+                emit: jest.fn(),
                 id: 'socket-id', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );
@@ -84,12 +94,119 @@ describe(`App`, () => {
         expect(joinMock).toHaveBeenCalledWith(`room-id`);
     });
 
-    it.todo(
-        'Should emit `room-joined` message to the room when the client joins a room'
-    );
-    it.todo(
-        `Should send 'room does not exists' message when the room does not exists`
-    );
+    it('Should emit `new client has joined the room` message to the room when the client joins a room', async () => {
+        // Given
+        const emitMock = jest.fn();
+        DB.rooms = {
+            'room-id': {
+                name: 'Room Name',
+                clients: {},
+                connectionPairs: [],
+            },
+        };
+
+        const { onJoinRoom } = handlers(
+            {
+                join: jest.fn(),
+                emit: jest.fn(),
+                id: 'socket-id', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: emitMock,
+                    };
+                },
+            },
+            {}
+        );
+
+        // when
+        await onJoinRoom({
+            roomId: 'room-id',
+            clientName: 'client-name',
+        });
+
+        // then
+        expect(emitMock).toHaveBeenCalledWith(SocketClientEvent.NewClient, {
+            clientId: 'socket-id',
+            clientName: 'client-name',
+        });
+    });
+
+    it(`Should emit 'room joined' message to the client when they join a room`, async () => {
+        // Given
+        const emitMock = jest.fn();
+        DB.rooms = {
+            'room-id': {
+                name: 'Room Name',
+                clients: {},
+                connectionPairs: [],
+            },
+        };
+
+        const { onJoinRoom } = handlers(
+            {
+                join: jest.fn(),
+                emit: emitMock,
+                id: 'socket-id', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
+            },
+            {}
+        );
+
+        // when
+        await onJoinRoom({
+            roomId: 'room-id',
+            clientName: 'client-name',
+        });
+
+        // then
+        expect(emitMock.mock.calls[MAX_INTERCONNECTED_CLIENTS - 1]).toEqual(
+            expect.arrayContaining([
+                SocketClientEvent.RoomJoined,
+                {
+                    roomName: 'Room Name',
+                    roomId: 'room-id',
+                    clients: [],
+                },
+            ])
+        );
+    });
+
+    it(`Should emit 'room does not exists' message when the room does not exists`, async () => {
+        // Given
+        const emitMock = jest.fn();
+        DB.rooms = {};
+
+        const { onJoinRoom } = handlers(
+            {
+                join: jest.fn(),
+                emit: emitMock,
+                id: 'socket-id', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
+            },
+            {}
+        );
+
+        // when
+        await onJoinRoom({
+            roomId: 'room-id',
+            clientName: 'client-name',
+        });
+
+        // then
+        expect(emitMock).toHaveBeenCalledWith(SocketClientEvent.RoomNotFound);
+    });
 
     it('Should create a room when a client requests it', async () => {
         // Given
@@ -128,9 +245,12 @@ describe(`App`, () => {
         await onCreateRoom(`New room`);
 
         // then
-        expect(emitMock).toBeCalledWith(SocketClientEvent.RoomCreated, {
-            roomId: expect.any(String),
-        });
+        expect(emitMock).toBeCalledWith(
+            SocketClientEvent.RoomCreated,
+            expect.objectContaining({
+                roomId: expect.any(String),
+            })
+        );
     });
 
     it('Should update the connectionPair in the room when the peer send an offer', async () => {
@@ -234,6 +354,12 @@ describe(`App`, () => {
                 join: jest.fn(),
                 emit: jest.fn(),
                 id: 'client-2', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );
@@ -297,6 +423,12 @@ describe(`App`, () => {
                 join: jest.fn(),
                 emit: emitMock,
                 id: 'socket-2', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );
@@ -364,6 +496,12 @@ describe(`App`, () => {
                 join: joinMock,
                 emit: emitMock,
                 id: 'client-2', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );
@@ -436,6 +574,12 @@ describe(`App`, () => {
                 join: joinMock,
                 emit: emitMock,
                 id: 'socket-2', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );
@@ -446,7 +590,7 @@ describe(`App`, () => {
 
         // then
         expect(emitMock.mock.calls).toHaveLength(
-            MAX_INTERCONNECTED_CLIENTS - 2
+            MAX_INTERCONNECTED_CLIENTS - 1 // should be called for each initiator and for the client who joins the room
         );
         expect(emitMock.mock.calls[0][0]).toBe(
             SocketClientEvent.OfferRequested
@@ -502,6 +646,12 @@ describe(`App`, () => {
                 join: jest.fn(),
                 emit: jest.fn(),
                 id: 'client-3', // socket id
+                // @ts-ignore
+                to: () => {
+                    return {
+                        emit: jest.fn(),
+                    };
+                },
             },
             {}
         );

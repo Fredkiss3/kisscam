@@ -6,6 +6,8 @@ export enum SocketClientEvent {
     Disconnected = 'client:disconnected',
     RoomCreated = 'client:room-created',
     RoomJoined = 'client:room-joined',
+    NewClient = 'client:new-client',
+    RoomNotFound = 'client:room-not-found',
 }
 
 export interface ClientEventMap {
@@ -30,10 +32,19 @@ export interface ClientEventMap {
         roomId: string;
         roomName: string;
     }) => void;
+    [SocketClientEvent.NewClient]: (arg: {
+        clientId: string;
+        clientName: string;
+    }) => void;
     [SocketClientEvent.RoomJoined]: (arg: {
         roomId: string;
         roomName: string;
+        clients: {
+            clientId: string;
+            clientName: string;
+        }[];
     }) => void;
+    [SocketClientEvent.RoomNotFound]: () => void;
 }
 
 export enum SocketServerEvent {

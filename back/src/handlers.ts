@@ -7,8 +7,8 @@ import { SocketClientEvent, ClientEventMap } from '@dpkiss-call/shared';
 
 export default function (socket: Partial<Socket>, server: Partial<Server>) {
     // the socket is always connected
-    const io = socket as Socket<ClientEventMap>;
-    const socketServer = server as Server<ClientEventMap>;
+    const clientSocket = socket as Socket<ClientEventMap>;
+    const serverSocket = server as Server<ClientEventMap>;
 
     const onCreateRoom = async function (roomName: string) {
         const roomId = randomBytes(5).toString('hex');
@@ -19,7 +19,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             connectionPairs: [],
         };
 
-        io.emit(SocketClientEvent.RoomCreated, { roomId, roomName });
+        clientSocket.emit(SocketClientEvent.RoomCreated, { roomId, roomName });
         console.log('Room created:', { roomId, roomName });
     };
 
@@ -30,20 +30,16 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         roomId: string;
         clientName: string;
     }) {
-        // join the socket to the room
-        io.join(roomId);
-
-        console.dir(
-            {
-                DB,
-                roomId,
-                clientName,
-            },
-            { depth: null }
-        );
-
         const room = DB.rooms[roomId];
-        const clientId = io.id;
+
+        if (!room) {
+            clientSocket.emit(SocketClientEvent.RoomNotFound);
+            return;
+        }
+
+        // join the socket to the room
+        clientSocket.join(roomId);
+        const clientId = clientSocket.id;
 
         room.clients[clientId] = {
             id: clientId,
@@ -57,7 +53,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                 const peerId = randomUUID();
 
                 // send request offer
-                io.emit(SocketClientEvent.OfferRequested, {
+                clientSocket.emit(SocketClientEvent.OfferRequested, {
                     peerId,
                 });
 
@@ -96,7 +92,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
 
                     // send request offer
                     if (currentPair.initiator.sdpOffer !== null) {
-                        io.emit(SocketClientEvent.AnswerRequested, {
+                        clientSocket.emit(SocketClientEvent.AnswerRequested, {
                             peerId,
                             sdpOffer: currentPair.initiator.sdpOffer,
                             iceCandidates: currentPair.initiator.iceCandidates,
@@ -120,7 +116,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                 const peerId = randomUUID();
 
                 // send request offer
-                io.emit(SocketClientEvent.OfferRequested, {
+                clientSocket.emit(SocketClientEvent.OfferRequested, {
                     peerId,
                 });
 
@@ -135,6 +131,24 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                 });
             }
         }
+
+        // send the room to the client
+        clientSocket.emit(SocketClientEvent.RoomJoined, {
+            roomId,
+            roomName: room.name,
+            clients: Object.values(room.clients)
+                .filter((client) => client.id !== clientId)
+                .map((client) => ({
+                    clientId: client.id,
+                    clientName: client.name,
+                })),
+        });
+
+        // inform the other clients
+        clientSocket.to(roomId).emit(SocketClientEvent.NewClient, {
+            clientId,
+            clientName,
+        });
 
         console.log(
             `${clientName} joined room the room : ${DB.rooms[roomId].name} (${roomId})`
@@ -151,7 +165,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         sdpOffer: object;
         candidates: object[];
     }) {
-        const roomId = [...io.rooms!][1];
+        const roomId = [...clientSocket.rooms!][1];
         const room = DB.rooms[roomId];
 
         const connectionPair = room.connectionPairs.find(
@@ -163,7 +177,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             connectionPair.initiator.sdpOffer = sdpOffer;
             connectionPair.initiator.iceCandidates = candidates;
 
-            io.to(roomId).emit(SocketClientEvent.OfferSent, {
+            clientSocket.to(roomId).emit(SocketClientEvent.OfferSent, {
                 peerId,
                 sdpOffer,
                 candidates,
@@ -180,7 +194,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         sdpAnswer: object;
         candidates: object[];
     }) => {
-        const roomId = [...io.rooms!][1];
+        const roomId = [...clientSocket.rooms!][1];
         const room = DB.rooms[roomId];
 
         const connectionPair = room.connectionPairs.find(
@@ -192,7 +206,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             connectionPair.responder.sdpAnswer = sdpAnswer;
 
             // send answer to the initiator
-            io.to(connectionPair.initiator.clientId).emit(
+            clientSocket.to(connectionPair.initiator.clientId).emit(
                 SocketClientEvent.AnswerSent,
                 {
                     peerId,
@@ -204,7 +218,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
     };
 
     const onDisconnect = async function () {
-        const id = io.id;
+        const id = clientSocket.id;
 
         const result = Object.entries(DB.rooms).find(
             ([, { clients }]) => id in clients
@@ -253,7 +267,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
 
         // send disconnected event to all the clients in the room
         const clientPeers = room.clients[id]?.peers || [];
-        socketServer.sockets
+        serverSocket.sockets
             .in(roomId)
             .emit(SocketClientEvent.Disconnected, [
                 ...clientPeers.map(({ id }) => id),
@@ -262,7 +276,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         // send offer request to all the clients that were passed as initiators
         deletedPairs.forEach((pair) => {
             if (pair.responder) {
-                socketServer
+                serverSocket
                     .to(pair.responder.clientId)
                     .emit(SocketClientEvent.OfferRequested, {
                         peerId: pair.responder.id,

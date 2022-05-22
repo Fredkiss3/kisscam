@@ -1,10 +1,17 @@
 import Fastify from 'fastify';
 import fastifyIO from 'fastify-socket.io';
 import cors from '@fastify/cors';
-import type { AddressInfo } from 'net';
 import { Socket } from 'socket.io';
-import { ServerEventMap, SocketServerEvent } from '@dpkiss-call/shared';
+import type { AddressInfo } from 'net';
+
+import {
+    ServerEventMap,
+    SocketServerEvent,
+    ClientEventMap,
+} from '@dpkiss-call/shared';
+
 import handlers from './handlers';
+
 const server = Fastify({});
 
 // Activate cors for all routes and all origins
@@ -21,17 +28,25 @@ server.register(fastifyIO);
 
 // we need to wait for the server to be ready, else `server.io` is undefined
 server.ready().then(() => {
-    server.io.on('connection', (socket: Socket<ServerEventMap>) => {
-        const { onAnswer, onCreateRoom, onDisconnect, onJoinRoom, onOffer } =
-            handlers(socket, server.io);
+    server.io.on(
+        'connection',
+        (socket: Socket<ServerEventMap, ClientEventMap>) => {
+            const {
+                onAnswer,
+                onCreateRoom,
+                onDisconnect,
+                onJoinRoom,
+                onOffer,
+            } = handlers(socket, server.io);
 
-        socket.on(SocketServerEvent.CreateRoom, onCreateRoom);
-        socket.on(SocketServerEvent.JoinRoom, onJoinRoom);
-        socket.on(SocketServerEvent.SendOffer, onOffer);
-        socket.on(SocketServerEvent.SendAnswer, onAnswer);
+            socket.on(SocketServerEvent.CreateRoom, onCreateRoom);
+            socket.on(SocketServerEvent.JoinRoom, onJoinRoom);
+            socket.on(SocketServerEvent.SendOffer, onOffer);
+            socket.on(SocketServerEvent.SendAnswer, onAnswer);
 
-        socket.on(`disconnect`, onDisconnect);
-    });
+            socket.on(`disconnect`, onDisconnect);
+        }
+    );
 });
 
 const start = async () => {

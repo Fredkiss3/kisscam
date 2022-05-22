@@ -1,7 +1,8 @@
 {
     "name": "@dpkiss-call/api",
     "version": "1.0.0",
-    "description": "",
+    "description": "Api for dpkiss-call",
+    "author": "Adrien KISSIE <fredkiss3@gmail.com>",
     "main": "./dist/index.js",
     "scripts": {
         "build": "tsc -p tsconfig.json",
@@ -11,7 +12,6 @@
         "dev": "nodemon src/index.ts"
     },
     "keywords": [],
-    "author": "",
     "license": "ISC",
     "dependencies": {
         "@dpkiss-call/shared": "workspace:^1.0.0",
