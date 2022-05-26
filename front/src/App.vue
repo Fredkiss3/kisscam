@@ -1,21 +1,32 @@
-<script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Hello Vue 3 + TypeScript + Vite" />
+  <div class="flex flex-col gap-2 items-center p-10">
+    <component :is="currentView" />
+  </div>
 </template>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
+
+<script setup lang="ts">
+
+import { ref, computed } from 'vue';
+import Home from './pages/Home.vue';
+import JoinRoom from './pages/JoinRoom.vue';
+import CreateRoom from './pages/CreateRoom.vue';
+import NotFound from './pages/NotFound.vue';
+
+const routes = {
+  '/': Home,
+  '/create-room': CreateRoom,
+  '/join-room': JoinRoom,
+};
+
+const currentPath = ref(window.location.hash);
+
+window.addEventListener('hashchange', () => {
+  currentPath.value = window.location.hash;
+});
+
+const currentView = computed(() => {
+  // @ts-ignore
+  return routes[currentPath.value.slice(1) || '/'] || NotFound;
+});
+</script>
