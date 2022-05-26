@@ -17,7 +17,7 @@ DPKISS Call is a web application that allows you to call your friends and family
 # Requirements
 
 - Node >= v16.6.2
-- [PNPM](https://pnpm.io/installation) >= v6.22.2
+- [PNPM](https://pnpm.io/installation) >= v7.1.0
 ## 🚀 How to work on the project ?
 
 1. First you have to clone the repository
