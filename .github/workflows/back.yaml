@@ -36,6 +36,6 @@ jobs:
           node-version: 16.x
           cache: "pnpm"
       - run: pnpm install --prefix shared
-      - run: pnpm run build --prefix shared
+      - run: pnpm run --prefix shared build
       - run: pnpm install --prefix back
-      - run: pnpm test --prefix back
+      - run: pnpm run --prefix back test
