@@ -15,19 +15,21 @@ import { computed } from 'vue';
 
 interface Props {
     class?: string;
-    variant?: 'primary' | 'danger' | 'hollow';
+    variant?: 'primary' | 'danger' | 'hollow' | 'dark';
     type?: 'button' | 'submit';
     title?: string;
     disabled?: boolean;
+    square?: boolean;
 }
 
-type Events = {
+interface Events {
     (e: 'click'): void;
-};
+}
 
 const props = withDefaults(defineProps<Props>(), {
     class: '',
-    variant: 'primary'
+    variant: 'primary',
+    square: false
 });
 
 const emit = defineEmits<Events>();
@@ -37,8 +39,11 @@ const classes = computed(() => {
         'bg-primary': props.variant === 'primary',
         'bg-danger': props.variant === 'danger',
         'bg-hollow': props.variant === 'hollow',
+        'bg-dark': props.variant === 'dark',
         'disabled:bg-secondary cursor-not-allowed': !!props.disabled,
-        'py-2 px-4 rounded-md font-bold text-white flex gap-2 items-center justify-center':
+        'p-2': props.square,
+        'py-2 px-4': !props.square,
+        'rounded-md font-bold text-white flex gap-2 items-center justify-center':
             true,
         [props.class]: true
     };
