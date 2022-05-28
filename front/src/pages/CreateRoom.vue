@@ -22,9 +22,11 @@
 <script setup lang="ts">
 import Input from '../components/Input.vue';
 import Button from '../components/Button.vue';
-import { ref, reactive } from 'vue';
+import { reactive } from 'vue';
+import { ArrowLeftIcon } from '@heroicons/vue/outline';
 
 function joinRoom() {
+    window.location.hash = `/room/abcedfg123`;
     console.log('joining room with: ', data);
 }
 

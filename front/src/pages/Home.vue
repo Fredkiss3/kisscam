@@ -12,4 +12,5 @@
 
 <script setup lang="ts">
 import Link from '../components/Link.vue';
+import { ArrowRightIcon, PlusIcon } from '@heroicons/vue/outline';
 </script>

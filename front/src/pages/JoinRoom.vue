@@ -18,6 +18,7 @@
 import Input from '../components/Input.vue';
 import Button from '../components/Button.vue';
 import { ref } from 'vue';
+import { ArrowLeftIcon } from '@heroicons/vue/outline';
 
 function joinRoom() {
     console.log('joining room with: ', roomId);
