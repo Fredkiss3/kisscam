@@ -4,6 +4,7 @@ importers:
 
   front:
     specifiers:
+      '@dpkiss-call/shared': workspace:^1.0.0
       '@heroicons/vue': ^1.0.6
       '@playwright/test': ^1.22.2
       '@vitejs/plugin-vue': ^2.3.3
@@ -21,6 +22,7 @@ importers:
       socket.io-client: 4.5.1
       vue: 3.2.35
     devDependencies:
+      '@dpkiss-call/shared': link:../shared
       '@playwright/test': 1.22.2
       '@vitejs/plugin-vue': 2.3.3_vite@2.9.9+vue@3.2.35
       autoprefixer: 10.4.7_postcss@8.4.14
