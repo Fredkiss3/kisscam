@@ -224,6 +224,7 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         );
 
         if (!result) {
+            console.log(`Client '${id}' disconnected but not in a room `);
             return;
         }
 
