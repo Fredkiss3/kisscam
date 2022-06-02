@@ -1,13 +1,21 @@
 <template>
     <div
-        v-if="id"
+        v-if="currentStep === 'JOINING_ROOM'"
+        class="flex gap-2 items-center justify-center h-screen w-full"
+    >
+        <Loader />
+
+        <h2>Connecting to the room...</h2>
+    </div>
+
+    <div
+        v-else-if="currentStep === 'ROOM_JOINED'"
         class="h-screen flex flex-col items-center justify-center gap-4 p-4 max-w-[1200px] m-auto"
     >
-        <h1 class="font-bold text-4xl">You are in room {{ id }}</h1>
+        <h1 class="font-bold text-4xl">You are in room {{ name }}</h1>
 
         <div class="flex gap-6 flex-col md:flex-row w-full">
-            <!-- <div class=""> -->
-            <VideoCard
+            <!-- <VideoCard
                 talking
                 :pinned="currentPinnedId === 'randeowdwehf;lwrih'"
                 audioActive
@@ -15,9 +23,8 @@
                 :peepsNo="peepsNo.second"
                 peerId="randeowdwehf;lwrih"
                 @pin="(peerId) => (currentPinnedId = peerId)"
-                class="w-full md:h-[500px]"
+                class="!w-full md:!h-[500px] max-w-[800px]"
             />
-            <!-- </div> -->
 
             <div class="flex flex-wrap gap-6 md:flex-col justify-center">
                 <VideoCard
@@ -39,45 +46,50 @@
                     @pin="(peerId) => (currentPinnedId = peerId)"
                     class="h-40 w-[225px]"
                 />
-            </div>
+            </div> -->
         </div>
 
-        <Button @click="randomizePeeps">
+        <!-- <Button @click="randomizePeeps">
             <span>Radomize Peeps</span> <RefreshIcon class="h-4" />
-        </Button>
+        </Button> -->
     </div>
+
+    <NotFound v-else message="Room not found" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue';
-import VideoCard from '../components/VideoCard.vue';
+import { computed, onMounted } from 'vue';
 import NotFound from '../pages/NotFound.vue';
-import Button from '../components/Button.vue';
-import { randomInt } from '../lib/functions';
-import { RefreshIcon } from '@heroicons/vue/outline';
+// import Button from '../components/Button.vue';
+// import { randomInt } from '../lib/functions';
+// import { RefreshIcon } from '@heroicons/vue/outline';
+import { useStore } from '../lib/store';
+import Loader from '../components/Loader.vue';
+import { gotoHashURL } from '../lib/functions';
 
-const peepsNo = reactive({
-    first: randomInt(1, 105),
-    second: randomInt(1, 105)
+const {
+    user,
+    joinRoom,
+    room: { id, name },
+    currentStep
+} = useStore();
+
+const hashFromID = computed(() => {
+    const roomRegex = /\/room\/([a-z0-9]{10})$/;
+    const hash = window.location.hash;
+    return hash.match(roomRegex)![1];
 });
 
-function randomizePeeps() {
-    peepsNo.first = randomInt(1, 105);
-    peepsNo.second = randomInt(1, 105);
-}
-
-// get the roomId
-const currentPinnedId = ref('');
-
-const roomRegex = /\/room\/([a-z0-9]{10})/;
-
-const id = computed(() => {
-    const hash = window.location.hash;
-    if (roomRegex.test(hash)) {
-        // @ts-ignore
-        return hash.match(roomRegex)[1];
-    } else {
-        return null;
+onMounted(() => {
+    if (!user.name) {
+        // window.location.hash = `/join-room`;
+        gotoHashURL('/join-room', {
+            'room-id': hashFromID.value
+        });
+        alert(`You must set a username before joining a room`);
+        return;
     }
+
+    joinRoom(hashFromID.value, user.name);
 });
 </script>
