@@ -2,13 +2,28 @@
     <div class="h-screen flex flex-col items-center justify-center gap-4">
         <h1 class="font-bold text-4xl">Create a room</h1>
 
-        <form @submit.prevent="joinRoom" class="flex flex-col gap-2">
-            <Input v-model="data.name" type="text" placeholder="Your name" />
-            <Input v-model="data.room" type="text" placeholder="Room name" />
+        <form @submit.prevent="createRoom(data)" class="flex flex-col gap-2">
+            <Input
+                v-model="data.username"
+                type="text"
+                placeholder="Your name"
+            />
+            <Input
+                v-model="data.roomName"
+                type="text"
+                placeholder="Room name"
+            />
             <Button
-                :disabled="data.room.length === 0 || data.name.length === 0"
+                :loading="currentStep === 'CREATING_ROOM'"
+                :disabled="
+                    data.roomName.length === 0 || data.username.length === 0
+                "
             >
-                Create
+                {{
+                    currentStep === 'CREATING_ROOM'
+                        ? 'Creating the room'
+                        : 'Create room'
+                }}
             </Button>
         </form>
 
@@ -22,16 +37,25 @@
 <script setup lang="ts">
 import Input from '../components/Input.vue';
 import Button from '../components/Button.vue';
-import { reactive } from 'vue';
-import { ArrowLeftIcon } from '@heroicons/vue/outline';
 
-function joinRoom() {
-    window.location.hash = `/room/abcedfg123`;
-    console.log('joining room with: ', data);
-}
+import { ArrowLeftIcon } from '@heroicons/vue/outline';
+import { reactive, watch } from 'vue';
+import { useStore } from '../lib/store';
+
+const { createRoom, currentStep, room } = useStore();
+
+// change the roomId when the user joins a room
+watch(
+    () => ({ currentStep, roomId: room.id }),
+    ({ currentStep, roomId }) => {
+        if (roomId && currentStep.value === 'ROOM_CREATED') {
+            window.location.hash = `/room/${roomId}`;
+        }
+    }
+);
 
 const data = reactive({
-    name: '',
-    room: ''
+    username: '',
+    roomName: ''
 });
 </script>
