@@ -1,10 +1,18 @@
 <template>
     <div :class="classes.parent">
+        <video
+            class="rounded-lg h-full w-full object-cover object-center"
+            v-if="videoSrc"
+            ref="videoRef"
+            autoplay
+            muted
+        />
+
         <div
             class="absolute inset-0 p-4 flex flex-col justify-between items-center"
         >
             <div class="flex justify-between w-full">
-                <Button variant="dark" square @click="emit('pin', peerId)">
+                <Button variant="dark" square @click="emit('pin', clientId)">
                     <PinFullIcon class="h-4 text-white" v-if="pinned" />
                     <PinIcon class="h-4 text-white" v-if="!pinned" />
                 </Button>
@@ -13,7 +21,7 @@
                 </Button>
             </div>
 
-            <div :class="classes.img">
+            <div v-if="!videoSrc" :class="classes.img">
                 <img
                     :src="`/Bust/peep-${peepsNo}.png`"
                     alt="You peeps"
@@ -33,7 +41,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch, watchEffect } from 'vue';
 import { randomInt } from '../lib/functions';
 import { DotsHorizontalIcon } from '@heroicons/vue/outline';
 
@@ -47,23 +55,22 @@ import MicIcon from '../components/MicIcon.vue';
 interface Props {
     class?: string;
     name?: string;
-    peerId: string;
-    videoActive?: boolean;
+    clientId: string;
     audioActive?: boolean;
     peepsNo?: number;
     talking?: boolean;
     pinned?: boolean;
     minimized?: boolean;
+    videoSrc?: MediaStream | null;
 }
 
 interface Events {
-    (e: 'pin', peerId: string): void;
+    (e: 'pin', clientId: string): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     class: '',
-    videoActive: false,
-    audioActive: false,
+    audioActive: true,
     talking: false,
     peepsNo: randomInt(1, 105),
     pinned: false,
@@ -86,5 +93,13 @@ const classes = computed(() => {
             'h-20 w-20': props.minimized
         }
     };
+});
+
+const videoRef = ref<HTMLVideoElement | null>(null);
+
+watchEffect(async () => {
+    if (videoRef.value && props.videoSrc) {
+        videoRef.value.srcObject = props.videoSrc;
+    }
 });
 </script>
