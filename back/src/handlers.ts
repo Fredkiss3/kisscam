@@ -47,6 +47,24 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
             peers: [],
         };
 
+        // send the room to the client
+        clientSocket.emit(SocketClientEvent.RoomJoined, {
+            roomId,
+            roomName: room.name,
+            clients: Object.values(room.clients)
+                .filter((client) => client.id !== clientId)
+                .map((client) => ({
+                    clientId: client.id,
+                    clientName: client.name,
+                })),
+        });
+
+        // inform the other clients
+        clientSocket.to(roomId).emit(SocketClientEvent.NewClient, {
+            clientId,
+            clientName,
+        });
+
         if (room.connectionPairs.length == 0) {
             // create n - 1 pairs to connect to the other clients
             for (let i = 0; i < MAX_INTERCONNECTED_CLIENTS - 1; i++) {
@@ -131,24 +149,6 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                 });
             }
         }
-
-        // send the room to the client
-        clientSocket.emit(SocketClientEvent.RoomJoined, {
-            roomId,
-            roomName: room.name,
-            clients: Object.values(room.clients)
-                .filter((client) => client.id !== clientId)
-                .map((client) => ({
-                    clientId: client.id,
-                    clientName: client.name,
-                })),
-        });
-
-        // inform the other clients
-        clientSocket.to(roomId).emit(SocketClientEvent.NewClient, {
-            clientId,
-            clientName,
-        });
 
         console.log(
             `${clientName} joined room the room : ${DB.rooms[roomId].name} (${roomId})`
@@ -291,9 +291,13 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         delete room.clients[id];
 
         // if there is no more clients connected, delete the room
-        if (Object.keys(room.clients).length === 0) {
-            delete DB.rooms[roomId];
-        }
+        // TODO: FIND A BETTER WAY TO DELETE THE ROOM
+        // if (Object.keys(room.clients).length === 0) {
+        //     delete DB.rooms[roomId];
+        // }
+
+        // remove the client from the room
+        await clientSocket.leave(result[0]);
     };
 
     return {
