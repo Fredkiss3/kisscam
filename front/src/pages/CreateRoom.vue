@@ -2,25 +2,29 @@
     <div class="h-screen flex flex-col items-center justify-center gap-4">
         <h1 class="font-bold text-4xl">Create a room</h1>
 
-        <form @submit.prevent="createRoom(data)" class="flex flex-col gap-2">
+        <form
+            @submit.prevent="store.createRoom(data)"
+            class="flex flex-col gap-2"
+        >
             <Input
                 v-model="data.username"
                 type="text"
                 placeholder="Your name"
             />
             <Input
+                auto-focus
                 v-model="data.roomName"
                 type="text"
                 placeholder="Room name"
             />
             <Button
-                :loading="currentStep === 'CREATING_ROOM'"
+                :loading="store.currentStep === 'CREATING_ROOM'"
                 :disabled="
                     data.roomName.length === 0 || data.username.length === 0
                 "
             >
                 {{
-                    currentStep === 'CREATING_ROOM'
+                    store.currentStep === 'CREATING_ROOM'
                         ? 'Creating the room'
                         : 'Create room'
                 }}
@@ -42,20 +46,20 @@ import { ArrowLeftIcon } from '@heroicons/vue/outline';
 import { reactive, watch } from 'vue';
 import { useStore } from '../lib/store';
 
-const { createRoom, currentStep, room } = useStore();
+const store = useStore();
 
 // change the roomId when the user joins a room
 watch(
-    () => ({ currentStep, roomId: room.id }),
+    () => ({ currentStep: store.currentStep, roomId: store.room.id }),
     ({ currentStep, roomId }) => {
-        if (roomId && currentStep.value === 'ROOM_CREATED') {
+        if (roomId && currentStep === 'ROOM_CREATED') {
             window.location.hash = `/room/${roomId}`;
         }
     }
 );
 
 const data = reactive({
-    username: '',
+    username: store.user.name,
     roomName: ''
 });
 </script>

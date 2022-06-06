@@ -1,10 +1,10 @@
 <template>
     <div>
-        {{ currentStep }}
+        {{ store.currentStep }}
     </div>
     <component :is="currentView" />
 
-    <footer class="sticky bottom-0 left-0 right-0 text-center p-5 bg-dark">
+    <footer class="fixed bottom-0 left-0 right-0 text-center p-5 bg-dark">
         Copyright &copy; 2022 By
         <a
             target="_blank"
@@ -34,7 +34,7 @@ import CreateRoom from './pages/CreateRoom.vue';
 import NotFound from './pages/NotFound.vue';
 import { useStore } from './lib/store';
 
-const { currentStep } = useStore();
+const store = useStore();
 
 const routes = {
     '/': Home,

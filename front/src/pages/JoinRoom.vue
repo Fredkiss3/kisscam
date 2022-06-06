@@ -3,13 +3,17 @@
         <h1 class="font-bold text-4xl">Join a room</h1>
 
         <form
-            @submit.prevent="joinRoom(data.roomId, data.name)"
+            @submit.prevent="store.joinRoom(data)"
             class="flex flex-col gap-2"
         >
-            <Input v-model="data.roomId" type="text" placeholder="Room ID" />
-            <Input v-model="data.name" type="text" placeholder="Your name" />
+            <Input v-model="data.id" type="text" placeholder="Room ID" />
+            <Input
+                v-model="data.username"
+                type="text"
+                placeholder="Your name"
+            />
             <Button
-                :disabled="data.roomId.length === 0 || data.name.length === 0"
+                :disabled="data.id.length === 0 || data.username.length === 0"
             >
                 Join
             </Button>
@@ -30,13 +34,13 @@ import { ArrowLeftIcon } from '@heroicons/vue/outline';
 import { useStore } from '../lib/store';
 import { reactive, watch } from 'vue';
 
-const { room, user, currentStep, joinRoom } = useStore();
+const store = useStore();
 
 // change the roomId when the user joins a room
 watch(
-    () => ({ currentStep, roomId: room.id }),
+    () => ({ currentStep: store.currentStep, roomId: store.room.id }),
     ({ currentStep, roomId }) => {
-        if (roomId && currentStep.value === 'JOINING_ROOM') {
+        if (roomId && currentStep === 'JOINING_ROOM') {
             window.location.hash = `/room/${roomId}`;
         }
     }
@@ -44,7 +48,7 @@ watch(
 
 const qs = new URLSearchParams(window.location.search);
 const data = reactive({
-    roomId: qs.get('room-id') || '',
-    name: ''
+    id: qs.get('room-id') || '',
+    username: store.user.name
 });
 </script>

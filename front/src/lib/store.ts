@@ -1,105 +1,123 @@
-import { ref, reactive, watch } from 'vue';
+import { reactive } from 'vue';
 import { io } from 'socket.io-client';
-import type { Socket } from 'socket.io-client';
-import type { User, Room, StoreState } from './types';
-import { wait } from './functions';
-import type { ServerEventMap, ClientEventMap } from '@dpkiss-call/shared';
+
+import { randomInt, wait } from './functions';
 import { SocketClientEvent, SocketServerEvent } from '@dpkiss-call/shared';
+import type { Store } from './types';
 
-import { onMounted, onUnmounted } from 'vue';
+const store = reactive<Store>({
+    socket: null,
+    user: {
+        id: null,
+        name: localStorage.getItem('userName') ?? '',
+        stream: null
+    },
+    room: {
+        id: null,
+        clients: []
+    },
+    currentStep: 'INITIAL',
 
-// Our global socket object
-export const socket = ref<Socket<ClientEventMap, ServerEventMap> | null>(null);
+    async createRoom({ roomName, username }) {
+        this.user.name = username;
+        localStorage.setItem('userName', username);
+        this.currentStep = 'CREATING_ROOM';
 
-export const user = reactive<User>({
-    id: null,
-    name: localStorage.getItem('userName') ?? ''
+        await wait(2000);
+
+        this.socket?.emit(SocketServerEvent.CreateRoom, roomName);
+    },
+
+    disconnect() {},
+
+    async joinRoom({ id, username }) {
+        this.currentStep = 'JOINING_ROOM';
+        this.user.name = username;
+        this.room.id = id;
+        localStorage.setItem('userName', username);
+
+        await wait(2000);
+
+        this.socket?.emit(SocketServerEvent.JoinRoom, {
+            roomId: id,
+            clientName: this.user.name
+        });
+    },
+    leaveRoom() {
+        this.socket?.emit(SocketServerEvent.Disconnect);
+        // reset all room data
+        this.room.id = null;
+        this.room.clients = [];
+    }
 });
 
-export const roomData = reactive<Room>({
-    id: null
+store.socket = io(`ws://${import.meta.env.VITE_WS_URL}/`, {
+    transports: ['websocket']
 });
 
-export const currentStep = ref<StoreState>('INITIAL');
+// Listen for events
+store.socket
+    .on('connect', () => {
+        console.log('connected');
+        store.user.id = store.socket!.id;
+    })
+    .on(SocketClientEvent.RoomCreated, ({ roomId, roomName }) => {
+        store.room.id = roomId;
+        store.room.name = roomName;
 
-export function useStore() {
-    onMounted(() => {
-        console.log('Mounting component');
+        console.log('created room : ', {
+            roomId,
+            roomName
+        });
+        store.currentStep = 'ROOM_CREATED';
+    })
+    .on(SocketClientEvent.RoomJoined, ({ roomId, roomName, clients }) => {
+        console.log('Joined room : ', {
+            roomId,
+            roomName
+        });
+        store.currentStep = 'ROOM_JOINED';
+        store.room.name = roomName;
+        store.room.clients = clients.map(({ clientId, clientName }) => ({
+            clientId,
+            clientName,
+            peepNo: randomInt(1, 105)
+        }));
+    })
+    .on(SocketClientEvent.RoomNotFound, () => {
+        console.log('Room not found');
 
-        if (!socket.value) {
-            socket.value = io(`ws://localhost:8080/`, {
-                transports: ['websocket']
-            })
-                .on('connect', () => {
-                    console.log('connected');
-                })
-                .on(SocketClientEvent.RoomCreated, ({ roomId, roomName }) => {
-                    roomData.id = roomId;
-                    roomData.name = roomName;
+        store.currentStep = 'ROOM_NOT_FOUND';
+    })
+    .on(SocketClientEvent.NewClient, ({ clientId, clientName }) => {
+        console.log('New client joined the room : ', {
+            clientId,
+            clientName
+        });
 
-                    console.log('created room : ', {
-                        roomId,
-                        roomName
-                    });
-                    currentStep.value = 'ROOM_CREATED';
-                })
-                .on(
-                    SocketClientEvent.RoomJoined,
-                    ({ roomId, roomName, clients }) => {
-                        console.log('Joined room : ', {
-                            roomId,
-                            roomName
-                        });
-                        currentStep.value = 'ROOM_JOINED';
-                    }
-                )
-                .on(SocketClientEvent.RoomNotFound, () => {
-                    console.log('Room not found');
+        const clientInRoom = store.room.clients.find(
+            (client) => client.clientId === clientId
+        );
 
-                    currentStep.value = 'ROOM_NOT_FOUND';
-                });
-        }
-    });
-
-    return {
-        socket: socket.value,
-        user,
-        room: roomData,
-        currentStep,
-        createRoom: async ({
-            roomName,
-            username
-        }: {
-            roomName: string;
-            username: string;
-        }) => {
-            user.name = username;
-            localStorage.setItem('userName', username);
-            currentStep.value = 'CREATING_ROOM';
-
-            await wait(2000);
-
-            socket.value?.emit(SocketServerEvent.CreateRoom, roomName);
-        },
-        disconnect: () => {
-            socket.value?.disconnect();
-            socket.value = null;
-            currentStep.value = 'INITIAL';
-            roomData.id = null;
-            roomData.name = '';
-        },
-        joinRoom: async (id: string, username: string) => {
-            currentStep.value = 'JOINING_ROOM';
-            user.name = username;
-            roomData.id = id;
-            localStorage.setItem('userName', username);
-
-            await wait(2000);
-
-            socket.value?.emit(SocketServerEvent.JoinRoom, {
-                roomId: id,
-                clientName: user.name
+        if (!clientInRoom) {
+            store.room.clients.push({
+                clientId,
+                clientName,
+                peepNo: randomInt(1, 105)
             });
         }
-    };
+    })
+    .on(SocketClientEvent.Disconnected, ({ clientId, peerIds }) => {
+        console.log('Client disconnected : ', {
+            clientId,
+            peerIds
+        });
+
+        store.room.clients = store.room.clients.filter(
+            ({ clientId: id }) => id !== clientId
+        );
+    });
+
+export function useStore() {
+    return store;
 }
