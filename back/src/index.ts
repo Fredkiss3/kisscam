@@ -45,6 +45,7 @@ server.ready().then(() => {
             socket.on(SocketServerEvent.SendAnswer, onAnswer);
 
             socket.on(`disconnect`, onDisconnect);
+            socket.on(SocketServerEvent.Disconnect, onDisconnect);
         }
     );
 });
