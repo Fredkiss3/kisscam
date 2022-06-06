@@ -1,5 +1,6 @@
 <template>
     <input
+        :autofocus="autoFocus"
         v-model.trim="value"
         :placeholder="placeholder"
         :type="type"
@@ -20,6 +21,7 @@ interface Props {
     placeholder?: string;
     modelValue?: string;
     error?: string;
+    autoFocus?: boolean;
 }
 
 interface Events {
@@ -29,7 +31,8 @@ interface Events {
 const props = withDefaults(defineProps<Props>(), {
     class: '',
     type: 'text',
-    modelValue: ''
+    modelValue: '',
+    autoFocus: false
 });
 
 const emit = defineEmits<Events>();
