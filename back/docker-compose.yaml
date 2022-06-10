@@ -1,0 +1,15 @@
+version: '3.3'
+
+services:
+    redis-gui:
+        image: rediscommander/redis-commander
+        environment:
+            - REDIS_HOSTS=local:redis:6379
+        ports:
+            - '8081:8081'
+
+    redis:
+        restart: unless-stopped
+        image: redis:7-alpine
+        ports:
+            - '6379:6379'

@@ -1,4 +1,6 @@
 <template>
+    <pre>{{ clientPeers }}</pre>
+    <pre>{{ store.peers }}</pre>
     <div
         v-if="store.currentStep === 'JOINING_ROOM'"
         class="flex gap-2 items-center justify-center h-screen w-full"
@@ -22,14 +24,17 @@
                 :video-src="store.user.stream"
                 :client-id="store.user.id!"
                 :peeps-no="randomInt(1, 105)"
+                :audio-active="false"
             />
 
             <VideoCard
-                v-for="client in store.room.clients"
-                :key="client.clientId"
+                v-for="(client, clientId) in store.room.clients"
+                :key="clientId"
                 :name="client.clientName"
-                :client-id="client.clientId"
+                :client-id="clientId"
                 :peeps-no="client.peepNo"
+                :video-src="client.stream"
+                :audio-active="!!client.stream"
             />
         </div>
     </div>
@@ -47,6 +52,15 @@ import { gotoHashURL } from '../lib/functions';
 import VideoCard from '../components/VideoCard.vue';
 
 const store = useStore();
+
+const clientPeers = computed(() => {
+    return Object.entries(store.peers)
+        .filter(([id, peer]) => !!peer.clientId)
+        .map(([id, peer]) => ({
+            id,
+            ...(peer.clientId ? store.room.clients[peer.clientId] : {})
+        }));
+});
 
 const hashFromID = computed(() => {
     const roomRegex = /\/room\/([a-z0-9]{10})$/;

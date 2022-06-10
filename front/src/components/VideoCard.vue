@@ -5,7 +5,7 @@
             v-if="videoSrc"
             ref="videoRef"
             autoplay
-            muted
+            :muted="true"
         />
 
         <div

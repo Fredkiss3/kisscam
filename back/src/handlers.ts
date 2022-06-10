@@ -114,6 +114,8 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                             peerId,
                             sdpOffer: currentPair.initiator.sdpOffer,
                             iceCandidates: currentPair.initiator.iceCandidates,
+                            fromClientId: currentPair.initiator.clientId,
+                            fromPeerId: currentPair.initiator.id,
                         });
                     }
 
@@ -181,6 +183,8 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                 peerId,
                 sdpOffer,
                 candidates,
+                fromClientId: connectionPair.initiator.clientId,
+                toPeerId: connectionPair.responder?.id,
             });
         }
     };
@@ -212,6 +216,8 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
                     peerId,
                     sdpAnswer,
                     candidates,
+                    fromClientId: connectionPair.responder.clientId,
+                    toPeerId: connectionPair.initiator.id,
                 });
         }
     };

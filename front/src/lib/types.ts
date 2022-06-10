@@ -7,14 +7,29 @@ export type User = {
     stream: MediaStream | null;
 };
 
-export type ClientData = {
-    peers: RTCPeerConnection[];
-};
-
 export type Room = {
     id: string | null;
     name?: string;
-    clients: { clientId: string; clientName: string; peepNo: number }[];
+    clients: Record<
+        string,
+        { clientName: string; peepNo: number; stream?: MediaStream }
+    >;
+};
+
+export type Peer = {
+    clientId?: string;
+    connection: RTCPeerConnection;
+    candidates: RTCIceCandidate[];
+    isInitiatior: boolean;
+    stream?: MediaStream;
+    offer?: {
+        sdp: RTCSessionDescriptionInit;
+        candidates: RTCIceCandidate[];
+    };
+    answer?: {
+        sdp: RTCSessionDescriptionInit;
+        candidates: RTCIceCandidate[];
+    };
 };
 
 export type StoreState =
@@ -30,8 +45,10 @@ export type Store = {
     user: User;
     room: Room;
     currentStep: StoreState;
+    peers: Record<string, Peer>;
     createRoom: (args: { roomName: string; username: string }) => Promise<void>;
     disconnect: () => void;
     joinRoom: (args: { id: string; username: string }) => Promise<void>;
     leaveRoom: () => void;
+    initSocket: () => void;
 };

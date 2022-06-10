@@ -14,3 +14,19 @@ export function wait(ms: number): Promise<void> {
     // Wait for the specified amount of time
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export function createPeerConnection() {
+    const pc = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: [
+                    'stun:stun1.l.google.com:19302',
+                    'stun:stun2.l.google.com:19302'
+                ]
+            }
+        ],
+        iceCandidatePoolSize: 50
+    });
+
+    return pc;
+}

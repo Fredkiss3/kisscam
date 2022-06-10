@@ -14,16 +14,22 @@ export interface ClientEventMap {
     [SocketClientEvent.OfferRequested]: (arg: { peerId: string }) => void;
     [SocketClientEvent.AnswerRequested]: (arg: {
         peerId: string;
+        fromClientId: string;
+        fromPeerId: string;
         sdpOffer: object;
         iceCandidates: object[];
     }) => void;
     [SocketClientEvent.OfferSent]: (arg: {
         peerId: string;
+        fromClientId: string;
+        toPeerId?: string;
         sdpOffer: object;
         candidates: object[];
     }) => void;
     [SocketClientEvent.AnswerSent]: (arg: {
         peerId: string;
+        fromClientId: string;
+        toPeerId: string;
         sdpAnswer: object;
         candidates: object[];
     }) => void;
