@@ -1,9 +1,12 @@
-export enum SocketClientEvent {
-    OfferRequested = 'client:offer-requested',
-    AnswerRequested = 'client:answer-requested',
-    OfferSent = 'client:offer-sent',
-    AnswerSent = 'client:answer-sent',
-    Disconnected = 'client:disconnected',
+// server --> client
+export enum SocketClientEvents {
+    // WebRTC Peer Negociation
+    NewOffer = 'client:new-offer',
+    NewCandidate = 'client:new-candidate',
+    NewAnswer = 'client:new-answer',
+
+    // Room management
+    ClientDisconnected = 'client:disconnected',
     RoomCreated = 'client:room-created',
     RoomJoined = 'client:room-joined',
     NewClient = 'client:new-client',
@@ -11,41 +14,34 @@ export enum SocketClientEvent {
 }
 
 export interface ClientEventMap {
-    [SocketClientEvent.OfferRequested]: (arg: { peerId: string }) => void;
-    [SocketClientEvent.AnswerRequested]: (arg: {
-        peerId: string;
+    [SocketClientEvents.NewOffer]: (arg: {
         fromClientId: string;
-        fromPeerId: string;
         sdpOffer: object;
-        iceCandidates: object[];
     }) => void;
-    [SocketClientEvent.OfferSent]: (arg: {
-        peerId: string;
+
+    [SocketClientEvents.NewCandidate]: (arg: {
         fromClientId: string;
-        toPeerId?: string;
-        sdpOffer: object;
-        candidates: object[];
+        iceCandidate: object;
     }) => void;
-    [SocketClientEvent.AnswerSent]: (arg: {
-        peerId: string;
+
+    [SocketClientEvents.NewAnswer]: (arg: {
         fromClientId: string;
-        toPeerId: string;
         sdpAnswer: object;
-        candidates: object[];
     }) => void;
-    [SocketClientEvent.Disconnected]: (arg: {
+
+    [SocketClientEvents.ClientDisconnected]: (arg: {
         clientId: string;
-        peerIds: string[];
     }) => void;
-    [SocketClientEvent.RoomCreated]: (arg: {
+
+    [SocketClientEvents.RoomCreated]: (arg: {
         roomId: string;
         roomName: string;
     }) => void;
-    [SocketClientEvent.NewClient]: (arg: {
+    [SocketClientEvents.NewClient]: (arg: {
         clientId: string;
         clientName: string;
     }) => void;
-    [SocketClientEvent.RoomJoined]: (arg: {
+    [SocketClientEvents.RoomJoined]: (arg: {
         roomId: string;
         roomName: string;
         clients: {
@@ -53,32 +49,37 @@ export interface ClientEventMap {
             clientName: string;
         }[];
     }) => void;
-    [SocketClientEvent.RoomNotFound]: () => void;
+    [SocketClientEvents.RoomNotFound]: () => void;
 }
 
-export enum SocketServerEvent {
+// client --> server
+export enum SocketServerEvents {
     CreateRoom = 'server:create-room',
     JoinRoom = 'server:join-room',
     SendOffer = 'server:send-offer',
     SendAnswer = 'server:send-answer',
-    Disconnect = 'server:disconnect',
+    SendCandidate = 'server:send-candidate',
 }
 
 export interface ServerEventMap {
-    [SocketServerEvent.CreateRoom]: (roomName: string) => void;
-    [SocketServerEvent.JoinRoom]: (arg: {
+    [SocketServerEvents.CreateRoom]: (roomName: string) => void;
+    [SocketServerEvents.JoinRoom]: (arg: {
         roomId: string;
         clientName: string;
     }) => void;
-    [SocketServerEvent.SendOffer]: (arg: {
-        peerId: string;
+
+    [SocketServerEvents.SendOffer]: (arg: {
+        toClientId: string;
         sdpOffer: object;
-        candidates: object[];
     }) => void;
-    [SocketServerEvent.SendAnswer]: (arg: {
-        peerId: string;
+
+    [SocketServerEvents.SendAnswer]: (arg: {
+        toClientId: string;
         sdpAnswer: object;
-        candidates: object[];
     }) => void;
-    [SocketServerEvent.Disconnect]: () => void;
+
+    [SocketServerEvents.SendCandidate]: (arg: {
+        toClientId: string;
+        iceCandidate: object;
+    }) => void;
 }
