@@ -17,19 +17,9 @@ export type Room = {
 };
 
 export type Peer = {
-    clientId?: string;
     connection: RTCPeerConnection;
-    candidates: RTCIceCandidate[];
-    isInitiatior: boolean;
+    isInitiator: boolean;
     stream?: MediaStream;
-    offer?: {
-        sdp: RTCSessionDescriptionInit;
-        candidates: RTCIceCandidate[];
-    };
-    answer?: {
-        sdp: RTCSessionDescriptionInit;
-        candidates: RTCIceCandidate[];
-    };
 };
 
 export type StoreState =
@@ -45,7 +35,7 @@ export type Store = {
     user: User;
     room: Room;
     currentStep: StoreState;
-    peers: Record<string, Peer>;
+    peers: Record<string, Peer>; // clientId: Peer
     createRoom: (args: { roomName: string; username: string }) => Promise<void>;
     disconnect: () => void;
     joinRoom: (args: { id: string; username: string }) => Promise<void>;

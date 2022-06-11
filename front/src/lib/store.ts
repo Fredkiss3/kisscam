@@ -2,7 +2,7 @@ import { reactive, watch, watchEffect } from 'vue';
 import { io } from 'socket.io-client';
 
 import { createPeerConnection, randomInt, wait } from './functions';
-import { SocketClientEvent, SocketServerEvent } from '@dpkiss-call/shared';
+import { SocketClientEvents, SocketServerEvents } from '@dpkiss-call/shared';
 import type { Store } from './types';
 
 const store = reactive<Store>({
@@ -26,7 +26,7 @@ const store = reactive<Store>({
 
         await wait(2000);
 
-        this.socket?.emit(SocketServerEvent.CreateRoom, roomName);
+        this.socket?.emit(SocketServerEvents.CreateRoom, roomName);
     },
 
     disconnect() {},
@@ -39,16 +39,17 @@ const store = reactive<Store>({
 
         await wait(2000);
 
-        this.socket?.emit(SocketServerEvent.JoinRoom, {
+        this.socket?.emit(SocketServerEvents.JoinRoom, {
             roomId: id,
             clientName: this.user.name
         });
     },
+
     leaveRoom() {
         // reset all room data
+        this.socket?.disconnect();
         this.room.id = null;
         this.room.clients = {};
-        this.socket?.disconnect();
         this.initSocket();
 
         // close all peer connections
@@ -57,6 +58,7 @@ const store = reactive<Store>({
         });
         this.peers = {};
     },
+
     initSocket() {
         this.socket = io(`ws://${import.meta.env.VITE_WS_URL}/`, {
             transports: ['websocket']
@@ -68,50 +70,31 @@ const store = reactive<Store>({
                 console.log('connected');
                 this.user.id = store.socket!.id;
             })
-            .on(SocketClientEvent.RoomCreated, ({ roomId, roomName }) => {
+            .on(SocketClientEvents.RoomCreated, ({ roomId, roomName }) => {
                 this.room.id = roomId;
                 this.room.name = roomName;
-
-                // console.log('created room : ', {
-                //     roomId,
-                //     roomName
-                // });
                 this.currentStep = 'ROOM_CREATED';
             })
-            .on(
-                SocketClientEvent.RoomJoined,
-                ({ roomId, roomName, clients }) => {
-                    // console.log('Joined room : ', {
-                    //     roomId,
-                    //     roomName
-                    // });
-                    this.currentStep = 'ROOM_JOINED';
-                    this.room.name = roomName;
-                    const listClients: Record<
-                        string,
-                        { clientName: string; peepNo: number }
-                    > = {};
-                    clients.forEach(({ clientId, clientName }) => {
-                        listClients[clientId] = {
-                            clientName,
-                            peepNo: randomInt(1, 10)
-                        };
-                    });
+            .on(SocketClientEvents.RoomJoined, ({ roomName, clients }) => {
+                this.currentStep = 'ROOM_JOINED';
+                this.room.name = roomName;
+                const listClients: Record<
+                    string,
+                    { clientName: string; peepNo: number }
+                > = {};
+                clients.forEach(({ clientId, clientName }) => {
+                    listClients[clientId] = {
+                        clientName,
+                        peepNo: randomInt(1, 10)
+                    };
+                });
 
-                    this.room.clients = listClients;
-                }
-            )
-            .on(SocketClientEvent.RoomNotFound, () => {
-                // console.log('Room not found');
-
+                this.room.clients = listClients;
+            })
+            .on(SocketClientEvents.RoomNotFound, () => {
                 this.currentStep = 'ROOM_NOT_FOUND';
             })
-            .on(SocketClientEvent.NewClient, ({ clientId, clientName }) => {
-                // console.log('New client joined the room : ', {
-                //     clientId,
-                //     clientName
-                // });
-
+            .on(SocketClientEvents.NewClient, ({ clientId, clientName }) => {
                 const clientInRoom = this.room.clients[clientId];
 
                 if (!clientInRoom) {
@@ -119,324 +102,154 @@ const store = reactive<Store>({
                         clientName,
                         peepNo: randomInt(1, 105)
                     };
+
+                    this.peers[clientId] = {
+                        connection: createPeerConnection(),
+                        isInitiator: true,
+                        stream: new MediaStream()
+                    };
+
+                    // Add local stream to peer connection
+                    const stream = this.user.stream;
+                    if (stream) {
+                        const { connection } = this.peers[clientId];
+                        stream
+                            .getTracks()
+                            .forEach((track) =>
+                                connection.addTrack(track, stream)
+                            );
+
+                        // Send candidates when there are ones
+                        connection.onicecandidate = (event) => {
+                            if (event.candidate) {
+                                this.socket?.emit(
+                                    SocketServerEvents.SendCandidate,
+                                    {
+                                        toClientId: clientId,
+                                        iceCandidate: event.candidate
+                                    }
+                                );
+                            }
+                        };
+
+                        // Create offer and send it to the other peer
+                        connection
+                            .createOffer()
+                            .then((sdp) => connection.setLocalDescription(sdp))
+                            .then(() => {
+                                this.socket?.emit(
+                                    SocketServerEvents.SendOffer,
+                                    {
+                                        toClientId: clientId,
+                                        sdpOffer: connection.localDescription!
+                                    }
+                                );
+                            });
+
+                        // Add remote stream to peer connection
+                        connection.ontrack = (event) => {
+                            this.peers[clientId].stream = event.streams[0];
+                        };
+                    }
                 }
             })
-            .on(SocketClientEvent.Disconnected, ({ clientId }) => {
-                // console.log('Client disconnected : ', {
-                //     clientId,
-                //     peerIds
-                // });
-
+            .on(SocketClientEvents.ClientDisconnected, ({ clientId }) => {
                 const { [clientId]: client, ...otherClients } =
                     this.room.clients;
 
                 this.room.clients = otherClients;
 
-                // remove all peer connections
-                const peersIdsToRemove = Object.entries(this.peers).filter(
-                    ([peerId, peer]) => peer.clientId === clientId
-                );
-
-                peersIdsToRemove.forEach(([peerId, peer]) => {
+                // close peer connection
+                const peer = this.peers[clientId];
+                if (peer) {
                     peer.connection.close();
-                    const { [peerId]: peerToRemove, ...otherPeers } =
-                        this.peers;
-                    this.peers = otherPeers;
-                });
+                    delete this.peers[clientId];
+                }
             })
-            .on(SocketClientEvent.OfferRequested, ({ peerId }) => {
-                console.log('Offer requested for id : ', peerId);
-                let peer = this.peers[peerId];
+            .on(SocketClientEvents.NewOffer, ({ fromClientId, sdpOffer }) => {
+                const peer = this.peers[fromClientId];
 
-                if (peer === undefined) {
-                    peer = {
+                if (peer) {
+                    return;
+                } else {
+                    this.peers[fromClientId] = {
                         connection: createPeerConnection(),
-                        candidates: [],
-                        isInitiatior: true,
+                        isInitiator: false,
                         stream: new MediaStream()
                     };
-                }
 
-                const { connection, stream } = peer;
+                    // Add local stream to peer connection
+                    const stream = this.user.stream;
 
-                this.peers[peerId] = peer;
+                    if (stream) {
+                        const { connection } = this.peers[fromClientId];
+                        stream
+                            .getTracks()
+                            .forEach((track) =>
+                                connection.addTrack(track, stream)
+                            );
 
-                connection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        const peer = this.peers[peerId];
-                        this.peers[peerId] = {
-                            ...peer,
-                            candidates: [...peer.candidates, event.candidate]
-                        };
-                    }
-                };
-
-                connection.addEventListener('icegatheringstatechange', () => {
-                    if (connection.iceGatheringState === 'complete') {
-                        // console.log(
-                        //     'ICE gathering complete',
-                        //     store.peers[peerId].candidates
-                        // );
-
-                        // Send offer only when ice candidates gathering is complete
-                        this.socket?.emit(SocketServerEvent.SendOffer, {
-                            peerId,
-                            sdpOffer: JSON.parse(
-                                JSON.stringify(connection.localDescription)
-                            ),
-                            candidates: this.peers[peerId].candidates
-                        });
-                    }
-                });
-
-                connection.ontrack = (event) => {
-                    event.streams[0].getTracks().forEach((track) => {
-                        console.log(
-                            `Adding ${track.kind} track to remote stream.`
-                        );
-
-                        stream?.addTrack(track);
-                    });
-                };
-            })
-            .on(
-                SocketClientEvent.AnswerRequested,
-                ({
-                    peerId,
-                    iceCandidates,
-                    sdpOffer,
-                    fromPeerId,
-                    fromClientId
-                }) => {
-                    console.log('Answer requested for id : ', peerId);
-                    let peer = this.peers[peerId];
-
-                    if (peer === undefined) {
-                        peer = {
-                            clientId: fromClientId,
-                            connection: createPeerConnection(),
-                            candidates: [],
-                            isInitiatior: false,
-                            stream: new MediaStream(),
-                            offer: {
-                                sdp: sdpOffer as RTCSessionDescriptionInit,
-                                candidates: iceCandidates as RTCIceCandidate[]
-                            }
-                        };
-                    }
-
-                    const { connection, stream } = peer;
-                    this.peers[peerId] = peer;
-
-                    connection.onicecandidate = (event) => {
-                        if (event.candidate) {
-                            const peer = this.peers[peerId];
-                            this.peers[peerId] = {
-                                ...peer,
-                                candidates: [
-                                    ...peer.candidates,
-                                    event.candidate
-                                ]
-                            };
-                        }
-                    };
-
-                    connection.addEventListener(
-                        'icegatheringstatechange',
-                        () => {
-                            if (connection.iceGatheringState === 'complete') {
-                                console.log(
-                                    'ICE gathering completed for answer',
-                                    store.peers[peerId].candidates
-                                );
-
-                                // Send offer only when ice candidates gathering is complete
+                        connection
+                            .setRemoteDescription(
+                                sdpOffer as RTCSessionDescriptionInit
+                            )
+                            .then(() => connection.createAnswer())
+                            .then((sdp) => connection.setLocalDescription(sdp))
+                            .then(() => {
                                 this.socket?.emit(
-                                    SocketServerEvent.SendAnswer,
+                                    SocketServerEvents.SendAnswer,
                                     {
-                                        peerId,
-                                        sdpAnswer: JSON.parse(
-                                            JSON.stringify(
-                                                connection.localDescription
-                                            )
-                                        ),
-                                        candidates:
-                                            this.peers[peerId].candidates
+                                        toClientId: fromClientId,
+                                        sdpAnswer: connection.localDescription!
+                                    }
+                                );
+                            });
+
+                        // Add remote stream to peer connection
+                        connection.ontrack = (event) => {
+                            this.peers[fromClientId].stream = event.streams[0];
+                        };
+
+                        // Send candidates when there are ones
+                        connection.onicecandidate = (event) => {
+                            if (event.candidate) {
+                                this.socket?.emit(
+                                    SocketServerEvents.SendCandidate,
+                                    {
+                                        toClientId: fromClientId,
+                                        iceCandidate: event.candidate
                                     }
                                 );
                             }
-                        }
-                    );
-
-                    connection.ontrack = (event) => {
-                        event.streams[0].getTracks().forEach((track) => {
-                            console.log(
-                                `Adding ${track.kind} track to remote stream.`
-                            );
-
-                            stream?.addTrack(track);
-                        });
-                    };
-
-                    store.room.clients[fromClientId].stream = stream;
-                }
-            )
-            .on(
-                SocketClientEvent.AnswerSent,
-                ({ peerId, fromClientId, candidates, sdpAnswer, toPeerId }) => {
-                    const peer = this.peers[toPeerId];
-
-                    if (peer === undefined) {
-                        return;
+                        };
                     }
+                }
+            })
+            .on(SocketClientEvents.NewAnswer, ({ fromClientId, sdpAnswer }) => {
+                const peer = this.peers[fromClientId];
 
-                    this.peers[toPeerId].clientId = fromClientId;
-                    this.peers[toPeerId].answer = {
-                        sdp: sdpAnswer as RTCSessionDescriptionInit,
-                        candidates: candidates as RTCIceCandidate[]
-                    };
-
-                    // this.peers[toPeerId] = {
-                    //     ...peer,
-                    //     clientId: fromClientId,
-                    //     answer: {
-                    //         sdp: sdpAnswer as RTCSessionDescriptionInit,
-                    //         candidates: candidates as RTCIceCandidate[]
-                    //     }
-                    // };
-
-                    console.log(
-                        `Answer sent from ${peerId}   to : ${toPeerId}`,
-                        {
-                            initiator: peer.isInitiatior
-                        }
+                if (peer) {
+                    peer.connection.setRemoteDescription(
+                        sdpAnswer as RTCSessionDescriptionInit
                     );
+                }
+            })
+            .on(
+                SocketClientEvents.NewCandidate,
+                ({ fromClientId, iceCandidate }) => {
+                    const peer = this.peers[fromClientId];
 
-                    store.room.clients[fromClientId].stream = peer.stream;
-                    // const { connection } = peer;
-                    /* 
-                         if (!pc.remoteDescription && pc.localDescription) {
-    const offer = JSON.parse(answerTextArea.value);
-
-    // Set remote description
-    await pc.setRemoteDescription(offer);
-  }                     
-                    */
+                    if (peer) {
+                        peer.connection.addIceCandidate(
+                            new RTCIceCandidate(iceCandidate)
+                        );
+                    }
                 }
             );
     }
 });
 
 store.initSocket();
-
-//
-watchEffect(async () => {
-    const stream = store.user.stream;
-    const peers = store.peers;
-
-    if (stream) {
-        // Push tracks from local stream to peer connections
-
-        for (const track of stream.getTracks()) {
-            for (const peerId in peers) {
-                const peer = peers[peerId];
-
-                try {
-                    // console.log(`Adding ${track.kind} track to local stream.`);
-                    peer.connection.addTrack(track, stream);
-                } catch (error) {
-                    // console.log(
-                    //     `Local track (${track.kind}) already added to peer connection. ${peerId}`
-                    // );
-                }
-
-                if (peer.isInitiatior) {
-                    if (!peer.connection.localDescription) {
-                        const offer = await peer.connection.createOffer();
-                        try {
-                            await peer.connection.setLocalDescription(offer);
-                        } catch (error) {
-                            // console.error(error);
-                        }
-                    } else {
-                        if (!peer.connection.remoteDescription && peer.answer) {
-                            console.log(
-                                'Setting remote description for answer for peer : ',
-                                peerId
-                            );
-
-                            await peer.connection.setRemoteDescription(
-                                peer.answer.sdp
-                            );
-                        }
-                    }
-                } else {
-                    if (!peer.connection.remoteDescription && peer.offer) {
-                        await peer.connection.setRemoteDescription(
-                            new RTCSessionDescription(peer.offer.sdp)
-                        );
-
-                        const answer = await peer.connection.createAnswer();
-
-                        // Set local description
-                        if (!peer.connection.localDescription) {
-                            try {
-                                await peer.connection.setLocalDescription(
-                                    answer
-                                );
-                            } catch (error) {
-                                // console.error(  error);
-                            }
-                        }
-
-                        for (const candidate of peer.offer.candidates) {
-                            await peer.connection.addIceCandidate(
-                                new RTCIceCandidate(candidate)
-                            );
-                        }
-
-                        console.log(
-                            'Set remote description for peer : ',
-                            peerId
-                        );
-                    }
-                }
-            }
-        }
-
-        // stream.getTracks().forEach((track) => {
-        //     Object.entries(peers).forEach(([peerId, peer]) => {
-        //         const { connection } = peer;
-        //         try {
-        //             connection.addTrack(track);
-
-        //             if (peer.isInitiatior) {
-        //                 connection.createOffer().then((offer) => {
-        //                     console.log('Offer created', {
-        //                         offer
-        //                     });
-
-        //                     if (!connection.localDescription) {
-        //                         connection
-        //                             .setLocalDescription(offer)
-        //                             .then(() => {
-        //                                 console.log('LocalDescription set');
-        //                             });
-        //                     }
-        //                 });
-        //             }
-        //             // console.log(
-        //             //     `Adding local track (${track.kind}) to peer connection. ${peerId}`
-        //             // );
-        //         } catch (error) {
-        //             // console.log(
-        //             //     `Local track (${track.kind}) already added to peer connection. ${peerId}`
-        //             // );
-        //         }
-        //     });
-        // });
-    }
-});
 
 export function useStore() {
     return store;

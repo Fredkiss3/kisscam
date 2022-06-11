@@ -1,6 +1,4 @@
 <template>
-    <pre>{{ clientPeers }}</pre>
-    <pre>{{ store.peers }}</pre>
     <div
         v-if="store.currentStep === 'JOINING_ROOM'"
         class="flex gap-2 items-center justify-center h-screen w-full"
@@ -33,8 +31,8 @@
                 :name="client.clientName"
                 :client-id="clientId"
                 :peeps-no="client.peepNo"
-                :video-src="client.stream"
-                :audio-active="!!client.stream"
+                :video-src="store.peers[clientId].stream"
+                :audio-active="!!store.peers[clientId].stream"
             />
         </div>
     </div>
@@ -52,15 +50,6 @@ import { gotoHashURL } from '../lib/functions';
 import VideoCard from '../components/VideoCard.vue';
 
 const store = useStore();
-
-const clientPeers = computed(() => {
-    return Object.entries(store.peers)
-        .filter(([id, peer]) => !!peer.clientId)
-        .map(([id, peer]) => ({
-            id,
-            ...(peer.clientId ? store.room.clients[peer.clientId] : {})
-        }));
-});
 
 const hashFromID = computed(() => {
     const roomRegex = /\/room\/([a-z0-9]{10})$/;
@@ -84,12 +73,15 @@ onMounted(async () => {
 
     if (stream) {
         store.user.stream = stream;
+        store.joinRoom({
+            id: hashFromID.value,
+            username: store.user.name
+        });
+    } else {
+        alert(
+            'You must allow access to your camera and microphone to join a room'
+        );
     }
-
-    store.joinRoom({
-        id: hashFromID.value,
-        username: store.user.name
-    });
 });
 
 onUnmounted(() => {
