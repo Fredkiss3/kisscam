@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyRequest } from 'fastify';
 import fastifyIO from 'fastify-socket.io';
 import cors from '@fastify/cors';
 import { Socket } from 'socket.io';
@@ -24,7 +24,7 @@ const server = Fastify({});
 
 // Activate cors for all routes and all origins
 server.register(cors, () => {
-    return (req, callback) => {
+    return (req: FastifyRequest, callback: Function) => {
         callback(null, {
             origin: req.headers.origin as string,
         });
@@ -36,9 +36,11 @@ server.register(fastifyIO);
 
 // we need to wait for the server to be ready, else `server.io` is undefined
 server.ready().then(() => {
+    // @ts-ignore
     server.io.on(
         'connection',
         (socket: Socket<ServerEventMap, ClientEventMap>) => {
+            // @ts-ignore
             handlers(socket, server.io).then(
                 ({
                     onAnswer,
