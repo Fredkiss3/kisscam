@@ -1,25 +1,34 @@
-import { ConnectionPair } from './lib/types';
-import { DB, MAX_INTERCONNECTED_CLIENTS } from './lib/constants';
-import { randomUUID, randomBytes } from 'crypto';
+import { getRepositories } from './db/entities';
+import { randomBytes } from 'crypto';
 import type { Server, Socket } from 'socket.io';
 
-import { SocketClientEvent, ClientEventMap } from '@dpkiss-call/shared';
+import {
+    ServerEventMap,
+    ClientEventMap,
+    SocketClientEvents,
+} from '@dpkiss-call/shared';
 
-export default function (socket: Partial<Socket>, server: Partial<Server>) {
+export default async function (
+    clientSocket: Socket<ServerEventMap, ClientEventMap>,
+    serverSocket: Server<ServerEventMap, ClientEventMap>
+) {
     // the socket is always connected
-    const clientSocket = socket as Socket<ClientEventMap>;
-    const serverSocket = server as Server<ClientEventMap>;
+    const { clientRepository, roomRepository, redisClient } =
+        await getRepositories();
 
     const onCreateRoom = async function (roomName: string) {
         const roomId = randomBytes(5).toString('hex');
 
-        DB.rooms[roomId] = {
+        const room = await roomRepository.createAndSave({
+            id: roomId,
             name: roomName,
-            clients: {},
-            connectionPairs: [],
-        };
+        });
 
-        clientSocket.emit(SocketClientEvent.RoomCreated, { roomId, roomName });
+        // The room should expire after 24 hours
+        await redisClient.execute(['EXPIRE', `Room:${room.entityId}`, 86400]);
+
+        clientSocket.emit(SocketClientEvents.RoomCreated, { roomId, roomName });
+
         console.log('Room created:', { roomId, roomName });
     };
 
@@ -30,280 +39,144 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         roomId: string;
         clientName: string;
     }) {
-        const room = DB.rooms[roomId];
+        const room = await roomRepository
+            .search()
+            .where('id')
+            .equals(roomId)
+            .return.first();
 
-        if (!room) {
-            clientSocket.emit(SocketClientEvent.RoomNotFound);
+        if (room === null) {
+            clientSocket.emit(SocketClientEvents.RoomNotFound);
             return;
         }
 
         // join the socket to the room
         clientSocket.join(roomId);
+
         const clientId = clientSocket.id;
 
-        room.clients[clientId] = {
+        // Save the client in the DB
+        const client = await clientRepository
+            .search()
+            .where('id')
+            .equals(clientId)
+            .where('roomId')
+            .equals(roomId)
+            .return.first();
+
+        if (client !== null) {
+            // do not save the client if the client is already in the Room
+            return;
+        }
+
+        await clientRepository.createAndSave({
             id: clientId,
             name: clientName,
-            peers: [],
-        };
+            roomId,
+        });
+
+        // get all the clients in the room
+        const clients = await clientRepository
+            .search()
+            .where('roomId')
+            .equals(roomId)
+            .where('id')
+            .is.not.equalTo(clientId)
+            .return.all();
 
         // send the room to the client
-        clientSocket.emit(SocketClientEvent.RoomJoined, {
+        clientSocket.emit(SocketClientEvents.RoomJoined, {
             roomId,
-            roomName: room.name,
-            clients: Object.values(room.clients)
-                .filter((client) => client.id !== clientId)
-                .map((client) => ({
-                    clientId: client.id,
-                    clientName: client.name,
-                })),
+            roomName: room.name!,
+            clients: clients.map((client) => ({
+                clientId: client.id!,
+                clientName: client.name!,
+            })),
         });
 
         // inform the other clients
-        clientSocket.to(roomId).emit(SocketClientEvent.NewClient, {
+        clientSocket.to(roomId).emit(SocketClientEvents.NewClient, {
             clientId,
             clientName,
         });
 
-        if (room.connectionPairs.length == 0) {
-            // create n - 1 pairs to connect to the other clients
-            for (let i = 0; i < MAX_INTERCONNECTED_CLIENTS - 1; i++) {
-                const peerId = randomUUID();
-
-                // send request offer
-                clientSocket.emit(SocketClientEvent.OfferRequested, {
-                    peerId,
-                });
-
-                // save peerId
-                room.connectionPairs.push({
-                    initiator: {
-                        clientId,
-                        id: peerId,
-                        sdpOffer: null,
-                        iceCandidates: [],
-                    },
-                });
-            }
-        } else {
-            // create n - 1 pairs to connect to the other clients
-            let connectedClientIds: string[] = [];
-            let numberOfPeersRemaining = MAX_INTERCONNECTED_CLIENTS - 1;
-
-            for (let i = 0; i < room.connectionPairs.length; i++) {
-                const peerId = randomUUID();
-
-                const currentPair = room.connectionPairs[i];
-
-                // do not connect :
-                //  - if the client is already connected
-                //  - and if the responder is already connected
-                if (
-                    !connectedClientIds.includes(
-                        currentPair.initiator.clientId
-                    ) &&
-                    currentPair.responder === undefined
-                ) {
-                    // update the peerId
-                    connectedClientIds.push(currentPair.initiator.clientId);
-                    numberOfPeersRemaining--;
-
-                    // send request offer
-                    if (currentPair.initiator.sdpOffer !== null) {
-                        clientSocket.emit(SocketClientEvent.AnswerRequested, {
-                            peerId,
-                            sdpOffer: currentPair.initiator.sdpOffer,
-                            iceCandidates: currentPair.initiator.iceCandidates,
-                            fromClientId: currentPair.initiator.clientId,
-                            fromPeerId: currentPair.initiator.id,
-                        });
-                    }
-
-                    // modify directly the connectionPair
-                    room.connectionPairs[i] = {
-                        ...room.connectionPairs[i],
-                        responder: {
-                            clientId,
-                            id: peerId,
-                            sdpAnswer: null,
-                            iceCandidates: [],
-                        },
-                    };
-                }
-            }
-
-            for (let i = 0; i < numberOfPeersRemaining; i++) {
-                const peerId = randomUUID();
-
-                // send request offer
-                clientSocket.emit(SocketClientEvent.OfferRequested, {
-                    peerId,
-                });
-
-                // save peerId
-                room.connectionPairs.push({
-                    initiator: {
-                        clientId,
-                        id: peerId,
-                        sdpOffer: null,
-                        iceCandidates: [],
-                    },
-                });
-            }
-        }
-
         console.log(
-            `${clientName} joined room the room : ${DB.rooms[roomId].name} (${roomId})`
+            `${clientName} joined room the room : ${room.name} (${roomId})`
         );
         return;
     };
 
     const onOffer = async function ({
-        peerId,
+        toClientId,
         sdpOffer,
-        candidates,
     }: {
-        peerId: string;
+        toClientId: string;
         sdpOffer: object;
-        candidates: object[];
     }) {
-        const roomId = [...clientSocket.rooms!][1];
-        const room = DB.rooms[roomId];
-
-        const connectionPair = room.connectionPairs.find(
-            ({ initiator }) =>
-                initiator.id === peerId && initiator.sdpOffer === null
-        );
-
-        if (connectionPair) {
-            connectionPair.initiator.sdpOffer = sdpOffer;
-            connectionPair.initiator.iceCandidates = candidates;
-
-            clientSocket.to(roomId).emit(SocketClientEvent.OfferSent, {
-                peerId,
-                sdpOffer,
-                candidates,
-                fromClientId: connectionPair.initiator.clientId,
-                toPeerId: connectionPair.responder?.id,
-            });
-        }
+        serverSocket.to(toClientId).emit(SocketClientEvents.NewOffer, {
+            fromClientId: clientSocket.id,
+            sdpOffer,
+        });
     };
 
-    const onAnswer = async ({
-        peerId,
+    const onAnswer = async function ({
+        toClientId,
         sdpAnswer,
-        candidates,
     }: {
-        peerId: string;
+        toClientId: string;
         sdpAnswer: object;
-        candidates: object[];
-    }) => {
-        const roomId = [...clientSocket.rooms!][1];
-        const room = DB.rooms[roomId];
-
-        const connectionPair = room.connectionPairs.find(
-            ({ responder }) =>
-                responder?.id === peerId && responder.sdpAnswer === null
-        ) as Required<ConnectionPair> | undefined;
-
-        if (connectionPair) {
-            connectionPair.responder.sdpAnswer = sdpAnswer;
-
-            // send answer to the initiator
-            clientSocket
-                .to(connectionPair.initiator.clientId)
-                .emit(SocketClientEvent.AnswerSent, {
-                    peerId,
-                    sdpAnswer,
-                    candidates,
-                    fromClientId: connectionPair.responder.clientId,
-                    toPeerId: connectionPair.initiator.id,
-                });
-        }
+    }) {
+        serverSocket.to(toClientId).emit(SocketClientEvents.NewAnswer, {
+            fromClientId: clientSocket.id,
+            sdpAnswer,
+        });
     };
 
     const onDisconnect = async function () {
         const id = clientSocket.id;
 
-        const result = Object.entries(DB.rooms).find(
-            ([, { clients }]) => id in clients
-        );
+        const client = await clientRepository
+            .search()
+            .where('id')
+            .equals(id)
+            .return.all();
 
-        if (!result) {
+        if (client.length === 0) {
             console.log(`Client '${id}' disconnected but not in a room `);
             return;
         }
 
-        const [roomId, room] = result;
-
-        const deletedPairs: ConnectionPair[] = [];
-        const newPairs = room.connectionPairs
-            .map((pair) => {
-                const { responder, initiator } = pair;
-
-                if (initiator.clientId === id) {
-                    deletedPairs.push(pair);
-                    return undefined;
-                } else if (responder?.clientId === id) {
-                    // remove responder without removing the pair
-                    return {
-                        initiator,
-                    };
-                }
-
-                return pair;
-            })
-            .filter(Boolean) as ConnectionPair[];
-
-        // pass all the responders to initiators
-        deletedPairs.forEach(({ responder }) => {
-            if (responder) {
-                newPairs.push({
-                    initiator: {
-                        clientId: responder.clientId,
-                        id: responder.id,
-                        sdpOffer: null,
-                        iceCandidates: [],
-                    },
-                });
-            }
-        });
-
-        room.connectionPairs = newPairs;
-
         // send disconnected event to all the clients in the room
-        const clientPeers = room.clients[id]?.peers || [];
-        serverSocket.sockets.in(roomId).emit(SocketClientEvent.Disconnected, {
-            clientId: id,
-            peerIds: clientPeers.map(({ id }) => id),
-        });
+        serverSocket.sockets
+            .in(client[0].roomId!)
+            .emit(SocketClientEvents.ClientDisconnected, {
+                clientId: id,
+            });
 
-        // send offer request to all the clients that were passed as initiators
-        deletedPairs.forEach((pair) => {
-            if (pair.responder) {
-                serverSocket
-                    .to(pair.responder.clientId)
-                    .emit(SocketClientEvent.OfferRequested, {
-                        peerId: pair.responder.id,
-                    });
-            }
-        });
+        // remove the client from the Room
+        for (const c of client) {
+            await clientRepository.remove(c.entityId);
+        }
+
+        // remove the client from the room
+        await clientSocket.leave(client[0].roomId!);
 
         console.log(
-            `${room.clients[id].name} left the room : ${DB.rooms[roomId].name} (${roomId})`
+            `${client[0].name} (${client[0].entityId}) left the room : (${client[0].roomId})`
         );
+    };
 
-        // remove the client from the room
-        delete room.clients[id];
-
-        // if there is no more clients connected, delete the room
-        // TODO: FIND A BETTER WAY TO DELETE THE ROOM
-        // if (Object.keys(room.clients).length === 0) {
-        //     delete DB.rooms[roomId];
-        // }
-
-        // remove the client from the room
-        await clientSocket.leave(result[0]);
+    const onCandidate = async function ({
+        iceCandidate,
+        toClientId,
+    }: {
+        iceCandidate: object;
+        toClientId: string;
+    }) {
+        serverSocket.to(toClientId).emit(SocketClientEvents.NewCandidate, {
+            fromClientId: clientSocket.id,
+            iceCandidate,
+        });
     };
 
     return {
@@ -312,5 +185,6 @@ export default function (socket: Partial<Socket>, server: Partial<Server>) {
         onOffer,
         onAnswer,
         onDisconnect,
+        onCandidate,
     };
 }

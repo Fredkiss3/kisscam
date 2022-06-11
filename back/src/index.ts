@@ -3,13 +3,21 @@ import fastifyIO from 'fastify-socket.io';
 import cors from '@fastify/cors';
 import { Socket } from 'socket.io';
 import type { AddressInfo } from 'net';
+import dotenv from 'dotenv';
+
+// Load .env file
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config({
+        path: `${__dirname}/.env.local`,
+    });
+}
 
 import {
     ServerEventMap,
-    SocketServerEvent,
+    SocketServerEvents,
     ClientEventMap,
 } from '@dpkiss-call/shared';
-
+import { initClient } from './lib/redis';
 import handlers from './handlers';
 
 const server = Fastify({});
@@ -31,25 +39,29 @@ server.ready().then(() => {
     server.io.on(
         'connection',
         (socket: Socket<ServerEventMap, ClientEventMap>) => {
-            const {
-                onAnswer,
-                onCreateRoom,
-                onDisconnect,
-                onJoinRoom,
-                onOffer,
-            } = handlers(socket, server.io);
+            handlers(socket, server.io).then(
+                ({
+                    onAnswer,
+                    onCreateRoom,
+                    onDisconnect,
+                    onJoinRoom,
+                    onOffer,
+                    onCandidate,
+                }) => {
+                    socket.on(SocketServerEvents.CreateRoom, onCreateRoom);
+                    socket.on(SocketServerEvents.JoinRoom, onJoinRoom);
+                    socket.on(SocketServerEvents.SendOffer, onOffer);
+                    socket.on(SocketServerEvents.SendAnswer, onAnswer);
+                    socket.on(SocketServerEvents.SendCandidate, onCandidate);
 
-            socket.on(SocketServerEvent.CreateRoom, onCreateRoom);
-            socket.on(SocketServerEvent.JoinRoom, onJoinRoom);
-            socket.on(SocketServerEvent.SendOffer, onOffer);
-            socket.on(SocketServerEvent.SendAnswer, onAnswer);
-
-            socket.on(`disconnect`, onDisconnect);
-            socket.on(SocketServerEvent.Disconnect, onDisconnect);
+                    socket.on(`disconnect`, onDisconnect);
+                }
+            );
         }
     );
 });
 
+// Start the server
 const start = async () => {
     try {
         await server.listen(8080);
@@ -68,4 +80,12 @@ const start = async () => {
         process.exit(1);
     }
 };
-start();
+
+initClient()
+    .then(() => {
+        start();
+    })
+    .catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
