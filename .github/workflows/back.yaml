@@ -38,4 +38,4 @@ jobs:
       - run: pnpm install --prefix shared
       - run: pnpm run --prefix shared build
       - run: pnpm install --prefix back
-      - run: pnpm run --prefix back test
+      - run: pnpm run --prefix back build
