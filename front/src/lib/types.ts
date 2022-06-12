@@ -5,6 +5,8 @@ export type User = {
     id: string | null;
     name: string;
     stream: MediaStream | null;
+    videoActivated?: boolean;
+    audioActivated?: boolean;
 };
 
 export type Room = {
@@ -12,7 +14,12 @@ export type Room = {
     name?: string;
     clients: Record<
         string,
-        { clientName: string; peepNo: number; stream?: MediaStream }
+        {
+            clientName: string;
+            peepNo: number;
+            videoActivated?: boolean;
+            audioActivated?: boolean;
+        }
     >;
 };
 
@@ -20,6 +27,7 @@ export type Peer = {
     connection: RTCPeerConnection;
     isInitiator: boolean;
     stream?: MediaStream;
+    dataChannel?: RTCDataChannel;
 };
 
 export type StoreState =
@@ -37,8 +45,29 @@ export type Store = {
     currentStep: StoreState;
     peers: Record<string, Peer>; // clientId: Peer
     createRoom: (args: { roomName: string; username: string }) => Promise<void>;
-    disconnect: () => void;
     joinRoom: (args: { id: string; username: string }) => Promise<void>;
     leaveRoom: () => void;
     initSocket: () => void;
+    toggleVideo: () => Promise<void>;
+    toggleAudio: () => Promise<void>;
+    syncStream: (args: {
+        clientId: string;
+        state: {
+            videoActivated?: boolean;
+            audioActivated?: boolean;
+        };
+    }) => void;
 };
+
+export type ToggleMessageType = {
+    payload: {
+        videoActivated?: boolean;
+        audioActivated?: boolean;
+    };
+};
+
+export function isToggleMessageType(
+    message: any
+): message is ToggleMessageType {
+    return 'payload' in message;
+}

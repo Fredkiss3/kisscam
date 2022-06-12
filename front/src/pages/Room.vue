@@ -1,28 +1,22 @@
 <template>
-    <div
-        v-if="store.currentStep === 'JOINING_ROOM'"
-        class="flex gap-2 items-center justify-center h-screen w-full"
-    >
-        <Loader />
-
-        <h2>Connecting to the room...</h2>
-    </div>
+    <NotFound
+        v-if="store.currentStep === 'ROOM_NOT_FOUND'"
+        message="Room not found"
+    />
 
     <div
         v-else-if="store.currentStep === 'ROOM_JOINED'"
-        class="h-screen flex flex-col items-center justify-center gap-4 p-4 max-w-[1200px] m-auto"
+        class="min-h-[100vh] flex flex-col items-center justify-center gap-4 p-4 max-w-[1200px] m-auto py-10"
     >
-        <h1 class="font-bold text-4xl">
-            You are in room {{ store.room.name }}
-        </h1>
-
         <div class="flex flex-wrap gap-6 justify-center">
             <VideoCard
                 name="You"
-                :video-src="store.user.stream"
+                :is-me="true"
+                :video-src="
+                    store.user.videoActivated ? store.user.stream : null
+                "
                 :client-id="store.user.id!"
                 :peeps-no="randomInt(1, 105)"
-                :audio-active="false"
             />
 
             <VideoCard
@@ -31,23 +25,35 @@
                 :name="client.clientName"
                 :client-id="clientId"
                 :peeps-no="client.peepNo"
-                :video-src="store.peers[clientId].stream"
-                :audio-active="!!store.peers[clientId].stream"
+                :video-src="
+                    store.room.clients[clientId].videoActivated
+                        ? store.peers[clientId]?.stream
+                        : null
+                "
+                :muted="!store.room.clients[clientId].audioActivated"
             />
         </div>
+
+        <ControlsPanel class="fixed bottom-24" />
     </div>
 
-    <NotFound v-else message="Room not found" />
+    <div v-else class="flex gap-2 items-center justify-center h-screen w-full">
+        <Loader />
+        <h2>Connecting to the room...</h2>
+    </div>
 </template>
 
 <script setup lang="ts">
+// utils & functions
 import { computed, onMounted, onUnmounted } from 'vue';
-import NotFound from '../pages/NotFound.vue';
-import { randomInt } from '../lib/functions';
+import { randomInt, gotoHashURL } from '../lib/functions';
 import { useStore } from '../lib/store';
+
+// components
+import NotFound from '../pages/NotFound.vue';
 import Loader from '../components/Loader.vue';
-import { gotoHashURL } from '../lib/functions';
 import VideoCard from '../components/VideoCard.vue';
+import ControlsPanel from '../components/ControlsPanel.vue';
 
 const store = useStore();
 

@@ -11,13 +11,10 @@
         <div
             class="absolute inset-0 p-4 flex flex-col justify-between items-center"
         >
-            <div class="flex justify-between w-full">
+            <div class="flex justify-end w-full">
                 <Button variant="dark" square @click="emit('pin', clientId)">
                     <PinFullIcon class="h-4 text-white" v-if="pinned" />
                     <PinIcon class="h-4 text-white" v-if="!pinned" />
-                </Button>
-                <Button variant="dark" square>
-                    <DotsHorizontalIcon class="h-4" />
                 </Button>
             </div>
 
@@ -30,9 +27,9 @@
             </div>
 
             <div class="flex gap-2 items-center w-full">
-                <Tag class="!px-2 !py-2">
-                    <MicIcon v-if="audioActive" class="text-white h-4" />
-                    <MutedMicIcon v-if="!audioActive" class="text-danger h-4" />
+                <Tag class="!px-2 !py-2" v-if="!isMe">
+                    <MicIcon v-if="!muted" class="text-white h-4" />
+                    <MutedMicIcon v-if="muted" class="text-danger h-4" />
                 </Tag>
                 <Tag>{{ name }}</Tag>
             </div>
@@ -41,9 +38,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch, watchEffect } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import { randomInt } from '../lib/functions';
-import { DotsHorizontalIcon } from '@heroicons/vue/outline';
 
 import Tag from '../components/Tag.vue';
 import Button from '../components/Button.vue';
@@ -56,12 +52,13 @@ interface Props {
     class?: string;
     name?: string;
     clientId: string;
-    audioActive?: boolean;
+    muted?: boolean;
     peepsNo?: number;
     talking?: boolean;
     pinned?: boolean;
     minimized?: boolean;
     videoSrc?: MediaStream | null;
+    isMe?: boolean;
 }
 
 interface Events {
@@ -70,11 +67,12 @@ interface Events {
 
 const props = withDefaults(defineProps<Props>(), {
     class: '',
-    audioActive: true,
+    muted: false,
     talking: false,
     peepsNo: randomInt(1, 105),
     pinned: false,
-    minimized: false
+    minimized: false,
+    isMe: false
 });
 
 const emit = defineEmits<Events>();

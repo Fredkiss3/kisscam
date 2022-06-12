@@ -1,16 +1,27 @@
-import { reactive, watch, watchEffect } from 'vue';
+import { reactive } from 'vue';
 import { io } from 'socket.io-client';
 
 import { createPeerConnection, randomInt, wait } from './functions';
+import { isToggleMessageType, Store } from './types';
+
 import { SocketClientEvents, SocketServerEvents } from '@dpkiss-call/shared';
-import type { Store } from './types';
+
+const userInfosStr = localStorage.getItem('userInfos');
+let userInfos = userInfosStr
+    ? (JSON.parse(userInfosStr) as Pick<
+          Store['user'],
+          'audioActivated' | 'videoActivated' | 'name'
+      >)
+    : null;
 
 const store = reactive<Store>({
     socket: null,
     user: {
         id: null,
-        name: localStorage.getItem('userName') ?? '',
-        stream: null
+        stream: null,
+        name: userInfos?.name || '',
+        videoActivated: userInfos?.videoActivated ?? true,
+        audioActivated: userInfos?.audioActivated ?? true
     },
     room: {
         id: null,
@@ -21,28 +32,159 @@ const store = reactive<Store>({
 
     async createRoom({ roomName, username }) {
         this.user.name = username;
-        localStorage.setItem('userName', username);
         this.currentStep = 'CREATING_ROOM';
 
-        await wait(2000);
+        userInfos = {
+            name: username,
+            videoActivated: this.user.videoActivated,
+            audioActivated: this.user.audioActivated
+        };
+        localStorage.setItem('userInfos', JSON.stringify(userInfos));
+
+        // only wait in development mode
+        if (import.meta.env.MODE === 'development') {
+            await wait(1500);
+        }
 
         this.socket?.emit(SocketServerEvents.CreateRoom, roomName);
     },
-
-    disconnect() {},
 
     async joinRoom({ id, username }) {
         this.currentStep = 'JOINING_ROOM';
         this.user.name = username;
         this.room.id = id;
-        localStorage.setItem('userName', username);
 
-        await wait(2000);
+        userInfos = {
+            name: username,
+            videoActivated: this.user.videoActivated,
+            audioActivated: this.user.audioActivated
+        };
+        localStorage.setItem('userInfos', JSON.stringify(userInfos));
+
+        // only wait in development mode
+        if (import.meta.env.MODE === 'development') {
+            await wait(1500);
+        }
 
         this.socket?.emit(SocketServerEvents.JoinRoom, {
             roomId: id,
             clientName: this.user.name
         });
+    },
+
+    async toggleAudio() {
+        const userStream = this.user.stream;
+
+        if (userStream) {
+            userStream.getTracks().forEach((track) => {
+                if (track.kind === 'audio') {
+                    track.enabled = !this.user.audioActivated;
+                }
+            });
+
+            // Notify the other clients' peers that the user has changed his video state
+            Object.values(this.peers).forEach((peer) => {
+                const { connection, dataChannel } = peer;
+
+                const sender = connection
+                    .getSenders()
+                    .find((sender) => sender.track?.kind === 'audio');
+
+                if (sender) {
+                    sender.replaceTrack(userStream.getAudioTracks()[0]);
+                }
+
+                dataChannel?.send(
+                    JSON.stringify({
+                        payload: {
+                            audioActivated: !this.user.audioActivated
+                        }
+                    })
+                );
+            });
+
+            this.user.audioActivated = !this.user.audioActivated;
+
+            localStorage.setItem(
+                'userInfos',
+                JSON.stringify({
+                    name: this.user.name,
+                    videoActivated: this.user.videoActivated,
+                    audioActivated: this.user.audioActivated
+                })
+            );
+        }
+    },
+
+    async toggleVideo() {
+        const userStream = this.user.stream;
+
+        if (userStream) {
+            userStream.getTracks().forEach((track) => {
+                if (track.kind === 'video') {
+                    track.enabled = !this.user.videoActivated;
+                }
+            });
+
+            // Notify the other clients' peers that the user has changed his video state
+            Object.values(this.peers).forEach((peer) => {
+                const { connection, dataChannel } = peer;
+
+                const sender = connection
+                    .getSenders()
+                    .find((sender) => sender.track?.kind === 'video');
+
+                if (sender) {
+                    sender.replaceTrack(userStream.getVideoTracks()[0]);
+                }
+
+                dataChannel?.send(
+                    JSON.stringify({
+                        payload: {
+                            videoActivated: !this.user.videoActivated
+                        }
+                    })
+                );
+            });
+
+            this.user.videoActivated = !this.user.videoActivated;
+
+            localStorage.setItem(
+                'userInfos',
+                JSON.stringify({
+                    name: this.user.name,
+                    videoActivated: this.user.videoActivated,
+                    audioActivated: this.user.audioActivated
+                })
+            );
+        }
+    },
+
+    syncStream({ clientId, state }) {
+        const peer = this.peers[clientId];
+
+        if (peer) {
+            const { stream } = peer;
+
+            stream?.getTracks().forEach((track) => {
+                if (
+                    track.kind === 'video' &&
+                    state.videoActivated !== undefined
+                ) {
+                    track.enabled = state.videoActivated;
+                    this.room.clients[clientId].videoActivated =
+                        state.videoActivated;
+                }
+                if (
+                    track.kind === 'audio' &&
+                    state.audioActivated !== undefined
+                ) {
+                    track.enabled = state.audioActivated;
+                    this.room.clients[clientId].audioActivated =
+                        state.audioActivated;
+                }
+            });
+        }
     },
 
     leaveRoom() {
@@ -109,10 +251,10 @@ const store = reactive<Store>({
                         stream: new MediaStream()
                     };
 
-                    // Add local stream to peer connection
                     const stream = this.user.stream;
                     if (stream) {
                         const { connection } = this.peers[clientId];
+                        // Add local stream to peer connection
                         stream
                             .getTracks()
                             .forEach((track) =>
@@ -132,24 +274,66 @@ const store = reactive<Store>({
                             }
                         };
 
-                        // Create offer and send it to the other peer
-                        connection
-                            .createOffer()
-                            .then((sdp) => connection.setLocalDescription(sdp))
-                            .then(() => {
-                                this.socket?.emit(
-                                    SocketServerEvents.SendOffer,
-                                    {
-                                        toClientId: clientId,
-                                        sdpOffer: connection.localDescription!
-                                    }
-                                );
-                            });
-
                         // Add remote stream to peer connection
                         connection.ontrack = (event) => {
                             this.peers[clientId].stream = event.streams[0];
                         };
+
+                        // create channel for sending data
+                        const channel = connection.createDataChannel(
+                            `events-${this.user.id}-${clientId}`
+                        );
+
+                        channel.onopen = (event) => {
+                            // Send the user's stream state to the new client
+                            channel.send(
+                                JSON.stringify({
+                                    payload: {
+                                        videoActivated:
+                                            this.user.videoActivated,
+                                        audioActivated: this.user.audioActivated
+                                    }
+                                })
+                            );
+                        };
+
+                        // Listen for data channel messages
+                        channel.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                // If the message is a toggled video or audio state, update the client's stream
+                                if (isToggleMessageType(data)) {
+                                    const { payload } = data;
+
+                                    this.syncStream({
+                                        clientId,
+                                        state: payload
+                                    });
+                                }
+                            } catch (error) {
+                                console.error(error);
+                            }
+                        };
+
+                        connection.onnegotiationneeded = (ev) => {
+                            connection
+                                .createOffer()
+                                .then((sdp) =>
+                                    connection.setLocalDescription(sdp)
+                                )
+                                .then(() => {
+                                    this.socket?.emit(
+                                        SocketServerEvents.SendOffer,
+                                        {
+                                            toClientId: clientId,
+                                            sdpOffer:
+                                                connection.localDescription!
+                                        }
+                                    );
+                                });
+                        };
+
+                        this.peers[clientId].dataChannel = channel;
                     }
                 }
             })
@@ -183,27 +367,12 @@ const store = reactive<Store>({
 
                     if (stream) {
                         const { connection } = this.peers[fromClientId];
+
                         stream
                             .getTracks()
                             .forEach((track) =>
                                 connection.addTrack(track, stream)
                             );
-
-                        connection
-                            .setRemoteDescription(
-                                sdpOffer as RTCSessionDescriptionInit
-                            )
-                            .then(() => connection.createAnswer())
-                            .then((sdp) => connection.setLocalDescription(sdp))
-                            .then(() => {
-                                this.socket?.emit(
-                                    SocketServerEvents.SendAnswer,
-                                    {
-                                        toClientId: fromClientId,
-                                        sdpAnswer: connection.localDescription!
-                                    }
-                                );
-                            });
 
                         // Add remote stream to peer connection
                         connection.ontrack = (event) => {
@@ -222,6 +391,60 @@ const store = reactive<Store>({
                                 );
                             }
                         };
+
+                        connection.ondatachannel = (event) => {
+                            const channel = event.channel;
+
+                            channel.onopen = (event) => {
+                                // Send the user's stream state to the new client
+                                channel.send(
+                                    JSON.stringify({
+                                        payload: {
+                                            videoActivated:
+                                                this.user.videoActivated,
+                                            audioActivated:
+                                                this.user.audioActivated
+                                        }
+                                    })
+                                );
+                            };
+
+                            // Listen for data channel messages
+                            channel.onmessage = (event) => {
+                                try {
+                                    const data = JSON.parse(event.data);
+                                    // If the message is a toggled video or audio state, update the client's stream
+                                    if (isToggleMessageType(data)) {
+                                        const { payload } = data;
+
+                                        this.syncStream({
+                                            clientId: fromClientId,
+                                            state: payload
+                                        });
+                                    }
+                                } catch (error) {
+                                    console.error(error);
+                                }
+                            };
+
+                            this.peers[fromClientId].dataChannel = channel;
+                        };
+
+                        connection
+                            .setRemoteDescription(
+                                sdpOffer as RTCSessionDescriptionInit
+                            )
+                            .then(() => connection.createAnswer())
+                            .then((sdp) => connection.setLocalDescription(sdp))
+                            .then(() => {
+                                this.socket?.emit(
+                                    SocketServerEvents.SendAnswer,
+                                    {
+                                        toClientId: fromClientId,
+                                        sdpAnswer: connection.localDescription!
+                                    }
+                                );
+                            });
                     }
                 }
             })
