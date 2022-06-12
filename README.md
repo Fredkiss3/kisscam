@@ -1,7 +1,7 @@
 
 <p align="center">
   <a href="https://thullo.fredkiss.dev">
-    <img alt="Design" src="./design/design.jpeg" width="100%" />
+    <img alt="Design" src="./design/result.png" width="100%" />
   </a>
 </p>
 
