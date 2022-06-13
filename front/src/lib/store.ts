@@ -42,6 +42,7 @@ const store = reactive<Store>({
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
 
         // only wait in development mode
+        // @ts-ignore
         if (import.meta.env.MODE === 'development') {
             await wait(1500);
         }
@@ -62,6 +63,7 @@ const store = reactive<Store>({
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
 
         // only wait in development mode
+        // @ts-ignore
         if (import.meta.env.MODE === 'development') {
             await wait(1500);
         }
@@ -202,6 +204,7 @@ const store = reactive<Store>({
     },
 
     initSocket() {
+        // @ts-ignore
         this.socket = io(`ws://${import.meta.env.VITE_WS_URL}/`, {
             transports: ['websocket']
         });
