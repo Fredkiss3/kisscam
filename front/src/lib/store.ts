@@ -205,7 +205,7 @@ const store = reactive<Store>({
 
     initSocket() {
         // @ts-ignore
-        this.socket = io(`ws://${import.meta.env.VITE_WS_URL}/`, {
+        this.socket = io(`//${import.meta.env.VITE_WS_URL}/`, {
             transports: ['websocket']
         });
 
