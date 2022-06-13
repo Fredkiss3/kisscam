@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.xml
+.idea/
+/.idea/codeStyles/codeStyleConfig.xml
+/.idea/codeStyles/Project.xml
+/.idea/vcs.xml
+*.iml
+notes.md
+# Local Netlify folder
+.netlify
+.DS_Store
+*.http
+.vercel
+.git
+.github
+.vercel
+docker-compose-prod.yml
+front/
+.gitignore
+.env.example

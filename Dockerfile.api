@@ -9,7 +9,9 @@ WORKDIR /webapp
 RUN apk add --update curl && rm -rf /var/cache/apk/*
 RUN curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm@7
 
-COPY ./* ./
+COPY ./package.json ./
+COPY ./pnpm-lock.yaml ./
+COPY ./tsconfig.json ./
 COPY ./shared ./shared
 COPY ./back ./back
 
