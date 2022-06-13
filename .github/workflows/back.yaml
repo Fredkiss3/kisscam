@@ -66,7 +66,7 @@ jobs:
             cd $DEPLOY_DIR/back
             docker-compose -f docker-compose.prod.yaml stop || true
             docker-compose -f docker-compose.prod.yaml rm -f || true
-            docker-compose -f docker-compose.prod.yaml up -d
+            echo $DCR_PASSWD | docker-compose -f docker-compose.prod.yaml up -d --username=$DCR_USER --password-stdin
             '
         env:
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
