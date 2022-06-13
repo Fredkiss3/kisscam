@@ -17,6 +17,7 @@
                 "
                 :client-id="store.user.id!"
                 :peeps-no="randomInt(1, 105)"
+                :muted="true"
             />
 
             <VideoCard
