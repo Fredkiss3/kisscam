@@ -11,6 +11,8 @@ on:
       - .github/workflows/back.yaml
       - ./package.json
       - ./pnpm-lock.yaml
+      - Dockerfile.api
+      - docker-compose.prod.yaml
     branches:
       - main
 
