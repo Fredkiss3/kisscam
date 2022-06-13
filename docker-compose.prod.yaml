@@ -11,6 +11,6 @@ services:
         image: dcr.fredkiss.dev/kisscam-api
         restart: unless-stopped
         ports:
-            - '8082:80'
+            - '8082:8080'
         environment:
             - REDIS_URL=redis://redis:6379
