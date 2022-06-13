@@ -8,7 +8,7 @@ services:
             - '6379:6379'
 
     kisscam:
-        image: dcr.fredkiss.dev/kisscam
+        image: dcr.fredkiss.dev/kisscam-api
         restart: unless-stopped
         ports:
             - '8082:80'
