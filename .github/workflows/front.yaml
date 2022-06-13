@@ -40,8 +40,8 @@ jobs:
 
       - name: Build the frontend
         run: |
-          FORCE_COLOR=true pnpm run build --prefix shared
-          NODE_ENV=production VITE_WS_URL=https://kisscam.fredkiss.dev/ws FORCE_COLOR=true pnpm run build --prefix front
+          FORCE_COLOR=true pnpm run --prefix shared build
+          NODE_ENV=production VITE_WS_URL=https://kisscam.fredkiss.dev/ws FORCE_COLOR=true pnpm run --prefix front build
 
       - name: Cache Build Output
         uses: actions/upload-artifact@v2
