@@ -8,7 +8,7 @@ on:
   push:
     paths:
       - "front/**"
-      - .github/workflows/front.yml
+      - .github/workflows/front.yaml
     branches:
       - main
 
@@ -19,7 +19,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: prod
 
     steps:
       - uses: actions/checkout@v2
@@ -53,7 +53,7 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
-    environment: dev
+    environment: prod
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:

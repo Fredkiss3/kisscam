@@ -21,7 +21,7 @@ on:
 jobs:
   build-push-docker:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: prod
 
     steps:
       - uses: actions/checkout@v2
@@ -42,7 +42,7 @@ jobs:
     needs:
       - build-push-docker
     runs-on: ubuntu-latest
-    environment: dev
+    environment: prod
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
