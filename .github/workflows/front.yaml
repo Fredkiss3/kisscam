@@ -27,7 +27,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@646cdf48217256a3d0b80361c5a50727664284f2
         with:
-          version: 6.22.2
+          version: 7.1.0
 
       - name: Setup Node version
         uses: actions/setup-node@v2
@@ -40,6 +40,7 @@ jobs:
 
       - name: Build the frontend
         run: |
+          FORCE_COLOR=true pnpm run build --prefix shared
           NODE_ENV=production VITE_WS_URL=https://kisscam.fredkiss.dev/ws FORCE_COLOR=true pnpm run build --prefix front
 
       - name: Cache Build Output
