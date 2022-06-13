@@ -74,7 +74,7 @@ jobs:
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
       - name: Deploy to Server
-        run: rsync -arvzP -e 'ssh -p $DEPLOY_PORT' ./dist/ $DEPLOY_USER@$DEPLOY_DOMAIN:$DEPLOY_DIR/front
+        run: rsync -arvzP -e "ssh -p $DEPLOY_PORT" ./dist/ $DEPLOY_USER@$DEPLOY_DOMAIN:$DEPLOY_DIR/front
         env:
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}

@@ -59,8 +59,8 @@ jobs:
 
       - name: Deploy to Server
         run: |
-          rsync -arvzP -e 'ssh -p $DEPLOY_PORT' ./docker-compose.prod.yaml $server:$DEPLOY_DIR/back
-          ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_DOMAIN '
+          rsync -arvzP -e 'ssh -p ${{ secrets.DEPLOY_PORT }}' ./docker-compose.prod.yaml $server:$DEPLOY_DIR/back
+          ssh -p ${{ secrets.DEPLOY_PORT }} $DEPLOY_USER@$DEPLOY_DOMAIN '
             echo $DCR_PASSWD | docker login  --username=$DCR_USER --password-stdin dcr.fredkiss.dev 
             set -e # ignore errors
             cd $DEPLOY_DIR/back
