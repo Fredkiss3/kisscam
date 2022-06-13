@@ -6,7 +6,7 @@ import {
     ServerEventMap,
     ClientEventMap,
     SocketClientEvents,
-} from '@dpkiss-call/shared';
+} from '@kisscam/shared';
 
 export default async function (
     clientSocket: Socket<ServerEventMap, ClientEventMap>,

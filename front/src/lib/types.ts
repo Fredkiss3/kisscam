@@ -1,5 +1,5 @@
 import type { Socket } from 'socket.io-client';
-import type { ServerEventMap, ClientEventMap } from '@dpkiss-call/shared';
+import type { ServerEventMap, ClientEventMap } from '@kisscam/shared';
 
 export type User = {
     id: string | null;

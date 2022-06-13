@@ -1,6 +1,6 @@
 <template>
     <div class="h-screen flex flex-col items-center justify-center gap-4">
-        <h1 class="font-bold text-4xl">DPKISS-CALL</h1>
+        <h1 class="font-bold text-4xl">KISS-CAM ❤️📸</h1>
         <Link href="#/join-room">
             Join a Room <ArrowRightIcon class="h-4" />
         </Link>

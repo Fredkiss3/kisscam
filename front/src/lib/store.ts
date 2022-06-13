@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { createPeerConnection, randomInt, wait } from './functions';
 import { isToggleMessageType, Store } from './types';
 
-import { SocketClientEvents, SocketServerEvents } from '@dpkiss-call/shared';
+import { SocketClientEvents, SocketServerEvents } from '@kisscam/shared';
 
 const userInfosStr = localStorage.getItem('userInfos');
 let userInfos = userInfosStr

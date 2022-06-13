@@ -1,5 +1,5 @@
 {
-    "name": "@dpkiss-call/shared",
+    "name": "@kisscam/shared",
     "version": "1.0.0",
     "main": "./dist/cjs/index.js",
     "module": "./dist/esm/index.js",

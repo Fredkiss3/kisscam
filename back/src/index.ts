@@ -16,7 +16,7 @@ import {
     ServerEventMap,
     SocketServerEvents,
     ClientEventMap,
-} from '@dpkiss-call/shared';
+} from '@kisscam/shared';
 import { initClient } from './lib/redis';
 import handlers from './handlers';
 
