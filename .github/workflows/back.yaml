@@ -19,23 +19,58 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  test:
-    # The type of runner that the job will run on
+  build-push-docker:
     runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: whoan/docker-build-with-cache-action@v5
+        with:
+          username: "${{ secrets.DCR_USER }}"
+          password: "${{ secrets.DCR_PASSWD }}"
+          image_name: kisscam-api
+          image_tag: latest
+          push_git_tag: true
+          registry: dcr.fredkiss.dev
+          dockerfile: Dockerfile.api
+          context: .
+          build_extra_args: "--build-arg REDIS_URL=${{ secrets.REDIS_URL }}"
+
+  deploy:
+    # The type of runner that the job will run on
+    needs:
+      - build-push-docker
+    runs-on: ubuntu-latest
+    environment: dev
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@v2
-      - uses: pnpm/action-setup@646cdf48217256a3d0b80361c5a50727664284f2
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
         with:
-          version: 7.1.0
-      - name: Use Node.js version 16.x
-        uses: actions/setup-node@v2
-        with:
-          node-version: 16.x
-          cache: "pnpm"
-      - run: pnpm install --prefix shared
-      - run: pnpm run --prefix shared build
-      - run: pnpm install --prefix back
-      - run: pnpm run --prefix back build
+          key: ${{ secrets.SSH_SERVER_KEY }}
+          name: id_rsa # optional
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Deploy to Server
+        run: |
+          rsync -arvzP -e 'ssh -p $DEPLOY_PORT' ./docker-compose.prod.yaml $server:$DEPLOY_DIR/back
+          ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_DOMAIN '
+            echo $DCR_PASSWD | docker login  --username=$DCR_USER --password-stdin dcr.fredkiss.dev 
+            set -e # ignore errors
+            cd $DEPLOY_DIR/back
+            docker-compose -f docker-compose.prod.yaml stop || true
+            docker-compose -f docker-compose.prod.yaml rm -f || true
+            docker-compose -f docker-compose.prod.yaml up -d
+            '
+        env:
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_DOMAIN: ${{ secrets.DEPLOY_DOMAIN }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DCR_PASSWD: ${{ secrets.DCR_PASSWD }}
+          DCR_USER: ${{ secrets.DCR_USER }}

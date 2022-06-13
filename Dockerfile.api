@@ -1,0 +1,29 @@
+FROM node:16-alpine
+
+# Build time args to be passed as env variables
+ARG REDIS_URL
+
+# With default values
+ENV PORT=80
+
+# should be specified
+ENV REDIS_URL=$REDIS_URL
+WORKDIR /webapp
+
+RUN apk add --update curl && rm -rf /var/cache/apk/*
+RUN curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm@7
+
+COPY ./* ./
+COPY ./shared ./shared
+COPY ./back ./back
+
+
+RUN pnpm install --prefix shared  --shamefully-hoist \
+    && pnpm --prefix shared run build 
+
+RUN pnpm install --prefix back  --shamefully-hoist \
+    && pnpm --prefix back run build 
+
+ENV NODE_ENV production
+
+CMD [ "pnpm", "run", "start", "--prefix", "back" ]
