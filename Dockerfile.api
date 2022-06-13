@@ -20,6 +20,6 @@ RUN pnpm install --prefix shared  --shamefully-hoist \
 RUN pnpm install --prefix back  --shamefully-hoist \
     && pnpm --prefix back run build 
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 CMD [ "pnpm", "run", "start", "--prefix", "back" ]
