@@ -36,7 +36,6 @@ jobs:
           registry: dcr.fredkiss.dev
           dockerfile: Dockerfile.api
           context: .
-          build_extra_args: "--build-arg REDIS_URL=${{ secrets.REDIS_URL }}"
 
   deploy:
     # The type of runner that the job will run on

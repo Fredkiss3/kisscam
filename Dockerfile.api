@@ -1,13 +1,10 @@
 FROM node:16-alpine
 
-# Build time args to be passed as env variables
-ARG REDIS_URL
-
 # With default values
 ENV PORT=80
 
 # should be specified
-ENV REDIS_URL=$REDIS_URL
+ENV REDIS_URL
 WORKDIR /webapp
 
 RUN apk add --update curl && rm -rf /var/cache/apk/*

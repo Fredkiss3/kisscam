@@ -10,7 +10,7 @@ on:
       - "front/**"
       - .github/workflows/front.yml
     branches:
-      - develop
+      - main
 
   # Allows you to run this workflow manually from the Actions tab+1
   workflow_dispatch:
