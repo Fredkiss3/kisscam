@@ -4,13 +4,11 @@ services:
     redis:
         restart: unless-stopped
         image: redislabs/redisearch
-        ports:
-            - '6379:6379'
 
     kisscam:
         image: dcr.fredkiss.dev/kisscam-api
         restart: unless-stopped
         ports:
-            - '8082:8080'
+            - '127.0.0.1:8082:8080'
         environment:
             - REDIS_URL=redis://redis:6379

@@ -66,7 +66,7 @@ server.ready().then(() => {
 // Start the server
 const start = async () => {
     try {
-        await server.listen(8080);
+        await server.listen(8080, `0.0.0.0`);
 
         const address = server.server.address() as AddressInfo;
         const port = typeof address === 'string' ? address : address?.port;
