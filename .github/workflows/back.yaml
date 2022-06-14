@@ -64,8 +64,9 @@ jobs:
             echo $DCR_PASSWD | docker login  --username=$DCR_USER --password-stdin dcr.fredkiss.dev 
             set -e # ignore errors
             cd $DEPLOY_DIR/back
-            docker-compose -f docker-compose.prod.yaml stop || true
+            docker-compose -f docker-compose.prod.yaml down || true
             docker-compose -f docker-compose.prod.yaml rm -f || true
+            docker-compose -f docker-compose.prod.yaml pull
             docker-compose -f docker-compose.prod.yaml up -d
             "
         env:
