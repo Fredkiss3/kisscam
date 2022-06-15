@@ -6,6 +6,8 @@
             ref="videoRef"
             autoplay
             :muted="muted"
+            playinline
+            playsinline
         />
 
         <div
