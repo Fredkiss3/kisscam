@@ -2,18 +2,26 @@
     <div class="h-screen flex flex-col items-center justify-center gap-4">
         <h1 class="font-bold text-4xl">Join a room</h1>
 
-        <form
-            @submit.prevent="store.joinRoom(data)"
-            class="flex flex-col gap-2"
-        >
-            <Input v-model="data.id" type="text" placeholder="Room ID" />
+        <form @submit.prevent="handleSubmit" class="flex flex-col gap-2">
+            <Input
+                v-model="data.id"
+                type="text"
+                placeholder="Room ID"
+                :error="data.errorOnID"
+                class=""
+            />
             <Input
                 v-model="data.username"
                 type="text"
                 placeholder="Your name"
             />
             <Button
-                :disabled="data.id.length === 0 || data.username.length === 0"
+                :disabled="
+                    data.id.length === 0 ||
+                    data.username.length === 0 ||
+                    !!data.errorOnID
+                "
+                :loading="isLoading"
             >
                 Join
             </Button>
@@ -32,23 +40,39 @@ import Button from '../components/Button.vue';
 
 import { ArrowLeftIcon } from '@heroicons/vue/outline';
 import { useStore } from '../lib/store';
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
 const store = useStore();
 
-// change the roomId when the user joins a room
+const isLoading = ref(false);
+
+const qs = new URLSearchParams(window.location.search);
+
+const data = reactive({
+    id: qs.get('room-id') || '',
+    username: store.user.name,
+    errorOnID: null as string | null
+});
+
 watch(
-    () => ({ currentStep: store.currentStep, roomId: store.room.id }),
-    ({ currentStep, roomId }) => {
-        if (roomId && currentStep === 'JOINING_ROOM') {
-            window.location.hash = `/room/${roomId}`;
-        }
+    () => data.id,
+    () => {
+        data.errorOnID = null;
     }
 );
 
-const qs = new URLSearchParams(window.location.search);
-const data = reactive({
-    id: qs.get('room-id') || '',
-    username: store.user.name
-});
+function handleSubmit() {
+    isLoading.value = true;
+
+    const roomIDRegex = /^([a-z0-9]{10})$/;
+
+    if (roomIDRegex.test(data.id)) {
+        store.updateUserName({ username: data.username });
+        window.location.hash = `/room/${data.id}`;
+    } else {
+        data.errorOnID =
+            'Invalid room ID, it should be an 10 characters long alphanumeric string, ex: abcdef1234';
+    }
+    isLoading.value = false;
+}
 </script>

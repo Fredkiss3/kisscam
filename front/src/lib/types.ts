@@ -46,6 +46,7 @@ export type Store = {
     peers: Record<string, Peer>; // clientId: Peer
     createRoom: (args: { roomName: string; username: string }) => Promise<void>;
     joinRoom: (args: { id: string; username: string }) => Promise<void>;
+    updateUserName: (args: { username: string }) => void;
     leaveRoom: () => void;
     initSocket: () => void;
     toggleVideo: () => Promise<void>;

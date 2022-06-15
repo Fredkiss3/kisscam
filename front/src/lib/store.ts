@@ -50,6 +50,15 @@ const store = reactive<Store>({
         this.socket?.emit(SocketServerEvents.CreateRoom, roomName);
     },
 
+    updateUserName({ username }) {
+        userInfos = {
+            name: username,
+            videoActivated: this.user.videoActivated,
+            audioActivated: this.user.audioActivated
+        };
+        localStorage.setItem('userInfos', JSON.stringify(userInfos));
+    },
+
     async joinRoom({ id, username }) {
         this.currentStep = 'JOINING_ROOM';
         this.user.name = username;

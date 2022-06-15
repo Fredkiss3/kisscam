@@ -7,9 +7,12 @@
         :class="classes"
     />
 
-    <p class="text-danger italic font-semibold" v-if="!!error">
+    <small
+        class="text-danger italic font-semibold max-w-[205px]"
+        v-if="!!error"
+    >
         {{ error }}
-    </p>
+    </small>
 </template>
 
 <script setup lang="ts">
@@ -20,7 +23,7 @@ interface Props {
     type?: 'text';
     placeholder?: string;
     modelValue?: string;
-    error?: string;
+    error?: string | null;
     autoFocus?: boolean;
 }
 

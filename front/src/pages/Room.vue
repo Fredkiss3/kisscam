@@ -73,21 +73,30 @@ onMounted(async () => {
         return;
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-    });
-
-    if (stream) {
-        store.user.stream = stream;
-        store.joinRoom({
-            id: hashFromID.value,
-            username: store.user.name
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
         });
-    } else {
+
+        if (stream) {
+            store.user.stream = stream;
+            store.joinRoom({
+                id: hashFromID.value,
+                username: store.user.name
+            });
+        } else {
+            alert(
+                'You must allow access to your camera and microphone to join a room'
+            );
+        }
+    } catch (error) {
         alert(
             'You must allow access to your camera and microphone to join a room'
         );
+        gotoHashURL('/join-room', {
+            'room-id': hashFromID.value
+        });
     }
 });
 
