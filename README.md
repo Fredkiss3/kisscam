@@ -1,47 +1,84 @@
 
 <p align="center">
-  <a href="https://thullo.fredkiss.dev">
+  <a href="https://kisscam.fredkiss.dev">
     <img alt="Design" src="./design/result.png" width="100%" />
   </a>
 </p>
 
-# DPKISS Call 😎
+# KISSCAM ❤️📸
 
 
-![Build Status Back](https://github.com/Fredkiss3/dpkiss-call/workflows/Continous%20Integration%20For%20Backend/badge.svg?branch=main)
-<!-- ![Build Status Front](https://github.com/Fredkiss3/dpkiss-call/workflows/CI%2FCD%20For%20the%20Frontend/badge.svg?branch=main) -->
+![Build Status Back](https://github.com/Fredkiss3/kisscam/workflows/Continous%20Integration%20For%20Backend/badge.svg?branch=main)
+![Build Status Front](https://github.com/Fredkiss3/kisscam/workflows/CI%2FCD%20For%20the%20Frontend/badge.svg?branch=main)
 
-DPKISS Call is a web application that allows you to call your friends and family for how much time you want.
+KISSCAM is a web application that allows you to call your friends and family for how much time you want.
 
 
 # Requirements
 
 - Node >= v16.6.2
 - [PNPM](https://pnpm.io/installation) >= v7.1.0
+- [docker](https://docs.docker.com/engine/install/)
+- [docker-compose](https://docs.docker.com/compose/install/)
+
 ## 🚀 How to work on the project ?
 
-1. First you have to clone the repository
+1. **First you have to clone the repository :**
     
     ```bash
-    git clone https://github.com/Fredkiss3/dpkiss-call.git
+    git clone https://github.com/Fredkiss3/kisscam.git
     ```    
 
-2. **Then, Install the dependencies :**
+2. **Install the dependencies :**
 
     ```bash
-    pnpm install
+    pnpm install --shamefully-hoist
     ```    
-
-3. **And launch the project :**
+3. **Build the shared lib package :**
 
     ```bash
-    pnpm run dev --parallel
+    cd shared
+    pnpm run build
     ```
 
-    The express API will be available at 
-    http://localhost:8080 and the frontend client at http://localhost:3000.
+4. **Run the docker-compose to launch the redis database :**
 
-4. **Open the source code and start rocking ! 😎**
+    ```bash
+    cd back
+    docker-compose up -d
+    ```
+
+5. **Copy the env file for setting environment variables :**
+   
+    ```bash
+    # the backend
+    cd back
+    cp .env.example .env.local
+    ```
+    
+    ```bash
+    # the frontend
+    cd front
+    cp .env.example .env.local
+    ```
+
+6. **And launch the project :**
+
+    ```bash
+    # the backend
+    cd back
+    pnpm run dev
+    ```
+
+    ```bash
+    # the frontend
+    cd front
+    pnpm run dev
+    ```
+
+    The API will be available at http://localhost:8080 and the frontend client at http://localhost:3000.
+
+7. **Open the source code and start rocking ! 😎**
 
 
 ## 🧐 Project structure
@@ -78,3 +115,19 @@ A quick look at the top-level files and directories you will see in this project
 6. **`pnpm-lock.yaml`**: this file contains the dependencies lock for the monorepo.
 
 7. **`tsconfig.json`**: this file contains the configuration for typescript, that are used by the all the underlying packages
+
+
+## 💫 Deploy the project
+
+This project is deployed to a custom VPS, with github actions.
+You can consult the files in `.github/workspaces` to see the different CI/CD scripts.
+
+## 🔐 ENV variables
+
+This project uses some environment variables to configure the project.
+### 🍳 List of the variables
+
+| name        | description                                              | used by |
+| ----------- | -------------------------------------------------------- | ------- |
+| REDIS_URL   | the url to the redis database where room data are stored | backend |
+| VITE_WS_URL | the api server URL                                       | front   |
