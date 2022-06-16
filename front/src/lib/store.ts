@@ -51,11 +51,14 @@ const store = reactive<Store>({
     },
 
     updateUserName({ username }) {
+        this.user.name = username;
         userInfos = {
             name: username,
             videoActivated: this.user.videoActivated,
             audioActivated: this.user.audioActivated
         };
+        console.log('updateUserName', userInfos);
+
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
     },
 

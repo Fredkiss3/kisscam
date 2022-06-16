@@ -1,7 +1,9 @@
 <template>
     <div :class="classes.parent">
         <video
-            class="rounded-lg h-full w-full object-cover object-center"
+            :class="`rounded-lg h-full w-full object-cover object-center ${
+                !videoActivated && 'hidden'
+            }`"
             v-if="videoSrc"
             ref="videoRef"
             autoplay
@@ -20,7 +22,7 @@
                 </Button>
             </div>
 
-            <div v-if="!videoSrc" :class="classes.img">
+            <div v-if="!videoSrc || !videoActivated" :class="classes.img">
                 <img
                     :src="`/Bust/peep-${peepsNo}.png`"
                     alt="You peeps"
@@ -61,6 +63,7 @@ interface Props {
     minimized?: boolean;
     videoSrc?: MediaStream | null;
     isMe?: boolean;
+    videoActivated?: boolean;
 }
 
 interface Events {
@@ -74,7 +77,8 @@ const props = withDefaults(defineProps<Props>(), {
     peepsNo: randomInt(1, 105),
     pinned: false,
     minimized: false,
-    isMe: false
+    isMe: false,
+    videoActivated: false
 });
 
 const emit = defineEmits<Events>();

@@ -26,12 +26,9 @@
                 :name="client.clientName"
                 :client-id="clientId"
                 :peeps-no="client.peepNo"
-                :video-src="
-                    store.room.clients[clientId].videoActivated
-                        ? store.peers[clientId]?.stream
-                        : null
-                "
+                :video-src="store.peers[clientId]?.stream ?? null"
                 :muted="!store.room.clients[clientId].audioActivated"
+                :video-activated="store.room.clients[clientId].videoActivated"
             />
         </div>
 
