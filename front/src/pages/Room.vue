@@ -12,12 +12,11 @@
             <VideoCard
                 name="You"
                 :is-me="true"
-                :video-src="
-                    store.user.videoActivated ? store.user.stream : null
-                "
+                :video-src="store.user.stream ?? null"
                 :client-id="store.user.id!"
                 :peeps-no="randomInt(1, 105)"
                 :muted="true"
+                :video-activated="store.user.videoActivated"
             />
 
             <VideoCard
