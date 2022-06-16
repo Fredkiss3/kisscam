@@ -97,7 +97,7 @@ const store = reactive<Store>({
             });
 
             // Notify the other clients' peers that the user has changed his video state
-            Object.values(this.peers).forEach((peer) => {
+            for (const peer of Object.values(this.peers)) {
                 const { connection, dataChannel } = peer;
 
                 const sender = connection
@@ -105,7 +105,7 @@ const store = reactive<Store>({
                     .find((sender) => sender.track?.kind === 'audio');
 
                 if (sender) {
-                    sender.replaceTrack(userStream.getAudioTracks()[0]);
+                    await sender.replaceTrack(userStream.getAudioTracks()[0]);
                 }
 
                 dataChannel?.send(
@@ -115,7 +115,7 @@ const store = reactive<Store>({
                         }
                     })
                 );
-            });
+            }
 
             this.user.audioActivated = !this.user.audioActivated;
 
@@ -141,7 +141,7 @@ const store = reactive<Store>({
             });
 
             // Notify the other clients' peers that the user has changed his video state
-            Object.values(this.peers).forEach((peer) => {
+            for (const peer of Object.values(this.peers)) {
                 const { connection, dataChannel } = peer;
 
                 const sender = connection
@@ -149,7 +149,7 @@ const store = reactive<Store>({
                     .find((sender) => sender.track?.kind === 'video');
 
                 if (sender) {
-                    sender.replaceTrack(userStream.getVideoTracks()[0]);
+                    await sender.replaceTrack(userStream.getVideoTracks()[0]);
                 }
 
                 dataChannel?.send(
@@ -159,7 +159,7 @@ const store = reactive<Store>({
                         }
                     })
                 );
-            });
+            }
 
             this.user.videoActivated = !this.user.videoActivated;
 
@@ -180,24 +180,19 @@ const store = reactive<Store>({
         if (peer) {
             const { stream } = peer;
 
-            stream?.getTracks().forEach((track) => {
-                if (
-                    track.kind === 'video' &&
-                    state.videoActivated !== undefined
-                ) {
-                    track.enabled = state.videoActivated;
+            if (stream) {
+                if (state.videoActivated !== undefined) {
+                    stream.getVideoTracks()[0].enabled = state.videoActivated;
                     this.room.clients[clientId].videoActivated =
                         state.videoActivated;
                 }
-                if (
-                    track.kind === 'audio' &&
-                    state.audioActivated !== undefined
-                ) {
-                    track.enabled = state.audioActivated;
+                if (state.audioActivated !== undefined) {
+                    stream.getAudioTracks()[0].enabled = state.audioActivated;
                     this.room.clients[clientId].audioActivated =
                         state.audioActivated;
                 }
-            });
+                console.log('syncStream', state);
+            }
         }
     },
 
