@@ -8,10 +8,7 @@ import { SocketClientEvents, SocketServerEvents } from '@kisscam/shared';
 
 const userInfosStr = localStorage.getItem('userInfos');
 let userInfos = userInfosStr
-    ? (JSON.parse(userInfosStr) as Pick<
-          Store['user'],
-          'audioActivated' | 'videoActivated' | 'name'
-      >)
+    ? (JSON.parse(userInfosStr) as Pick<Store['user'], 'name'>)
     : null;
 
 const store = reactive<Store>({
@@ -20,8 +17,8 @@ const store = reactive<Store>({
         id: null,
         stream: null,
         name: userInfos?.name || '',
-        videoActivated: userInfos?.videoActivated ?? true,
-        audioActivated: userInfos?.audioActivated ?? true
+        videoActivated: true,
+        audioActivated: true
     },
     room: {
         id: null,
@@ -35,9 +32,7 @@ const store = reactive<Store>({
         this.currentStep = 'CREATING_ROOM';
 
         userInfos = {
-            name: username,
-            videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated
+            name: username
         };
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
 
@@ -53,9 +48,7 @@ const store = reactive<Store>({
     updateUserName({ username }) {
         this.user.name = username;
         userInfos = {
-            name: username,
-            videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated
+            name: username
         };
         console.log('updateUserName', userInfos);
 
@@ -68,9 +61,7 @@ const store = reactive<Store>({
         this.room.id = id;
 
         userInfos = {
-            name: username,
-            videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated
+            name: username
         };
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
 
@@ -122,9 +113,7 @@ const store = reactive<Store>({
             localStorage.setItem(
                 'userInfos',
                 JSON.stringify({
-                    name: this.user.name,
-                    videoActivated: this.user.videoActivated,
-                    audioActivated: this.user.audioActivated
+                    name: this.user.name
                 })
             );
         }
@@ -166,9 +155,7 @@ const store = reactive<Store>({
             localStorage.setItem(
                 'userInfos',
                 JSON.stringify({
-                    name: this.user.name,
-                    videoActivated: this.user.videoActivated,
-                    audioActivated: this.user.audioActivated
+                    name: this.user.name
                 })
             );
         }
