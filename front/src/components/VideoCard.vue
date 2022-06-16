@@ -106,4 +106,11 @@ watchEffect(async () => {
         videoRef.value.srcObject = props.videoSrc;
     }
 });
+
+// Automatically play the video when the source the audio or video is loaded.
+watchEffect(async () => {
+    if (videoRef.value && (!props.muted || props.videoActivated)) {
+        videoRef.value.play();
+    }
+});
 </script>
