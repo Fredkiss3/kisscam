@@ -2,11 +2,14 @@
     <div :class="classes">
         <RssIcon class="-scale-x-100 text-danger h-6" />
         <div class="flex flex-col">
-            <h1 class="font-bold text-lg">
+            <h1 class="font-bold text-lg" v-if="variant === 'detailled'">
                 You are in {{ store.room.name }} room
             </h1>
+            <h1 class="font-bold text-lg" v-else>
+                {{ store.room.name }}
+            </h1>
 
-            <small class="text-secondary">
+            <small class="text-secondary" v-if="variant === 'detailled'">
                 {{
                     Object.keys(store.room.clients).length > 0
                         ? `${
@@ -14,6 +17,9 @@
                           } together with you`
                         : 'No one is here but you'
                 }}
+            </small>
+            <small class="text-secondary" v-else>
+                {{ store.room.podTitle }}
             </small>
         </div>
 
@@ -61,6 +67,7 @@
                 class="p-3"
                 square
                 @click="copyRoomLinkToClipboard"
+                v-if="variant === 'detailled'"
             >
                 <ShareIcon class="h-6" />
             </Button>
@@ -96,10 +103,12 @@ const store = useStore();
 
 interface Props {
     class?: string;
+    variant?: 'simple' | 'detailled';
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    class: ''
+    class: '',
+    variant: 'detailled',
 });
 
 async function copyRoomLinkToClipboard() {
@@ -112,8 +121,7 @@ const classes = computed(() => {
     return {
         'border-secondary/50 bg-darker border p-3 rounded-2xl': true,
         'flex items-stretch gap-4': true,
-        // 'flex-col sm:flex-row': true,
-        [props.class]: true
+        [props.class]: true,
     };
 });
 </script>

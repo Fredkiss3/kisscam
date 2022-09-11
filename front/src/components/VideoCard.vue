@@ -16,9 +16,8 @@
             class="absolute inset-0 p-4 flex flex-col justify-between items-center"
         >
             <div class="flex justify-end w-full">
-                <Button variant="dark" square @click="emit('pin', clientId)">
-                    <PinFullIcon class="h-4 text-white" v-if="pinned" />
-                    <PinIcon class="h-4 text-white" v-if="!pinned" />
+                <Button variant="dark" square v-if="isHost">
+                    <HomeIcon class="h-4 text-white" />
                 </Button>
             </div>
 
@@ -45,12 +44,12 @@
 import { computed, ref, watchEffect } from 'vue';
 import { randomInt } from '../lib/functions';
 
+// components
 import Tag from '../components/Tag.vue';
 import Button from '../components/Button.vue';
-import PinIcon from '../components/PinIcon.vue';
-import PinFullIcon from '../components/PinFullIcon.vue';
 import MutedMicIcon from '../components/MutedMicIcon.vue';
 import MicIcon from '../components/MicIcon.vue';
+import { HomeIcon } from '@heroicons/vue/solid';
 
 interface Props {
     class?: string;
@@ -59,11 +58,12 @@ interface Props {
     muted?: boolean;
     peepsNo?: number;
     talking?: boolean;
-    pinned?: boolean;
     minimized?: boolean;
     videoSrc?: MediaStream | null;
     isMe?: boolean;
     videoActivated?: boolean;
+    fixedWidth?: boolean;
+    isHost?: boolean;
 }
 
 interface Events {
@@ -75,10 +75,11 @@ const props = withDefaults(defineProps<Props>(), {
     muted: false,
     talking: false,
     peepsNo: randomInt(1, 105),
-    pinned: false,
     minimized: false,
     isMe: false,
-    videoActivated: false
+    isHost: false,
+    videoActivated: false,
+    fixedWidth: true,
 });
 
 const emit = defineEmits<Events>();
@@ -86,16 +87,17 @@ const emit = defineEmits<Events>();
 const classes = computed(() => {
     return {
         parent: {
-            'rounded-lg relative bg-hollow h-[320px] w-[450px]': true,
+            'rounded-lg relative bg-hollow h-[320px]': true,
             'border-2 border-primary': props.talking,
             [props.class]: true,
-            'h-[200px] w-[250px]': props.minimized
+            'h-[200px] w-[250px]': props.minimized,
+            'w-[450px]': props.fixedWidth,
         },
         img: {
             'rounded-full bg-dark': true,
             'h-40 w-40': !props.minimized,
-            'h-20 w-20': props.minimized
-        }
+            'h-20 w-20': props.minimized,
+        },
     };
 });
 

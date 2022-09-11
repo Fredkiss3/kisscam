@@ -4,6 +4,8 @@ import type { ServerEventMap, ClientEventMap } from '@kisscam/shared';
 export type User = {
     id: string | null;
     name: string;
+    twitchUserName?: string;
+    podTitle?: string;
     stream: MediaStream | null;
     videoActivated?: boolean;
     audioActivated?: boolean;
@@ -12,11 +14,13 @@ export type User = {
 export type Room = {
     id: string | null;
     name?: string;
+    podTitle?: string;
     clients: Record<
         string,
         {
             clientName: string;
             peepNo: number;
+            isHost?: boolean;
             videoActivated?: boolean;
             audioActivated?: boolean;
         }
@@ -44,7 +48,12 @@ export type Store = {
     room: Room;
     currentStep: StoreState;
     peers: Record<string, Peer>; // clientId: Peer
-    createRoom: (args: { roomName: string; username: string }) => Promise<void>;
+    createRoom: (args: {
+        roomName: string;
+        username: string;
+        twitchHostName?: string;
+        podTitle?: string;
+    }) => Promise<void>;
     joinRoom: (args: { id: string; username: string }) => Promise<void>;
     updateUserName: (args: { username: string }) => void;
     leaveRoom: () => void;

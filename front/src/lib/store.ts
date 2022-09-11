@@ -10,7 +10,11 @@ const userInfosStr = localStorage.getItem('userInfos');
 let userInfos = userInfosStr
     ? (JSON.parse(userInfosStr) as Pick<
           Store['user'],
-          'audioActivated' | 'videoActivated' | 'name'
+          | 'audioActivated'
+          | 'videoActivated'
+          | 'name'
+          | 'twitchUserName'
+          | 'podTitle'
       >)
     : null;
 
@@ -19,26 +23,31 @@ const store = reactive<Store>({
     user: {
         id: null,
         stream: null,
+        podTitle: userInfos?.podTitle,
+        twitchUserName: userInfos?.twitchUserName,
         name: userInfos?.name || '',
         videoActivated: userInfos?.videoActivated ?? true,
-        audioActivated: userInfos?.audioActivated ?? true
+        audioActivated: userInfos?.audioActivated ?? true,
     },
     room: {
         id: null,
-        clients: {}
+        clients: {},
     },
     peers: {},
     currentStep: 'INITIAL',
 
-    async createRoom({ roomName, username }) {
+    async createRoom({ roomName, username, twitchHostName, podTitle }) {
         this.user.name = username;
         this.currentStep = 'CREATING_ROOM';
 
         userInfos = {
+            podTitle,
             name: username,
+            twitchUserName: twitchHostName,
             videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated
+            audioActivated: this.user.audioActivated,
         };
+
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
 
         // only wait in development mode
@@ -47,15 +56,21 @@ const store = reactive<Store>({
             await wait(1500);
         }
 
-        this.socket?.emit(SocketServerEvents.CreateRoom, roomName);
+        this.socket?.emit(
+            SocketServerEvents.CreateRoom,
+            roomName,
+            twitchHostName,
+            podTitle
+        );
     },
 
     updateUserName({ username }) {
         this.user.name = username;
         userInfos = {
+            ...userInfos,
             name: username,
             videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated
+            audioActivated: this.user.audioActivated,
         };
         console.log('updateUserName', userInfos);
 
@@ -68,9 +83,10 @@ const store = reactive<Store>({
         this.room.id = id;
 
         userInfos = {
+            ...userInfos,
             name: username,
             videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated
+            audioActivated: this.user.audioActivated,
         };
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
 
@@ -82,7 +98,7 @@ const store = reactive<Store>({
 
         this.socket?.emit(SocketServerEvents.JoinRoom, {
             roomId: id,
-            clientName: this.user.name
+            clientName: this.user.name,
         });
     },
 
@@ -111,8 +127,8 @@ const store = reactive<Store>({
                 dataChannel?.send(
                     JSON.stringify({
                         payload: {
-                            audioActivated: !this.user.audioActivated
-                        }
+                            audioActivated: !this.user.audioActivated,
+                        },
                     })
                 );
             }
@@ -122,9 +138,10 @@ const store = reactive<Store>({
             localStorage.setItem(
                 'userInfos',
                 JSON.stringify({
+                    ...userInfos,
                     name: this.user.name,
                     videoActivated: this.user.videoActivated,
-                    audioActivated: this.user.audioActivated
+                    audioActivated: this.user.audioActivated,
                 })
             );
         }
@@ -155,8 +172,8 @@ const store = reactive<Store>({
                 dataChannel?.send(
                     JSON.stringify({
                         payload: {
-                            videoActivated: !this.user.videoActivated
-                        }
+                            videoActivated: !this.user.videoActivated,
+                        },
                     })
                 );
             }
@@ -166,9 +183,10 @@ const store = reactive<Store>({
             localStorage.setItem(
                 'userInfos',
                 JSON.stringify({
+                    ...userInfos,
                     name: this.user.name,
                     videoActivated: this.user.videoActivated,
-                    audioActivated: this.user.audioActivated
+                    audioActivated: this.user.audioActivated,
                 })
             );
         }
@@ -213,7 +231,7 @@ const store = reactive<Store>({
     initSocket() {
         // @ts-ignore
         this.socket = io(`//${import.meta.env.VITE_WS_URL}/`, {
-            transports: ['websocket']
+            transports: ['websocket'],
         });
 
         // Listen for events
@@ -232,12 +250,12 @@ const store = reactive<Store>({
                 this.room.name = roomName;
                 const listClients: Record<
                     string,
-                    { clientName: string; peepNo: number }
+                    { clientName: string; peepNo: number; isHost?: boolean }
                 > = {};
                 clients.forEach(({ clientId, clientName }) => {
                     listClients[clientId] = {
                         clientName,
-                        peepNo: randomInt(1, 10)
+                        peepNo: randomInt(1, 10),
                     };
                 });
 
@@ -252,13 +270,13 @@ const store = reactive<Store>({
                 if (!clientInRoom) {
                     this.room.clients[clientId] = {
                         clientName,
-                        peepNo: randomInt(1, 105)
+                        peepNo: randomInt(1, 105),
                     };
 
                     this.peers[clientId] = {
                         connection: createPeerConnection(),
                         isInitiator: true,
-                        stream: new MediaStream()
+                        stream: new MediaStream(),
                     };
 
                     const stream = this.user.stream;
@@ -278,7 +296,7 @@ const store = reactive<Store>({
                                     SocketServerEvents.SendCandidate,
                                     {
                                         toClientId: clientId,
-                                        iceCandidate: event.candidate
+                                        iceCandidate: event.candidate,
                                     }
                                 );
                             }
@@ -301,8 +319,9 @@ const store = reactive<Store>({
                                     payload: {
                                         videoActivated:
                                             this.user.videoActivated,
-                                        audioActivated: this.user.audioActivated
-                                    }
+                                        audioActivated:
+                                            this.user.audioActivated,
+                                    },
                                 })
                             );
                         };
@@ -317,7 +336,7 @@ const store = reactive<Store>({
 
                                     this.syncStream({
                                         clientId,
-                                        state: payload
+                                        state: payload,
                                     });
                                 }
                             } catch (error) {
@@ -337,7 +356,7 @@ const store = reactive<Store>({
                                         {
                                             toClientId: clientId,
                                             sdpOffer:
-                                                connection.localDescription!
+                                                connection.localDescription!,
                                         }
                                     );
                                 });
@@ -369,7 +388,7 @@ const store = reactive<Store>({
                     this.peers[fromClientId] = {
                         connection: createPeerConnection(),
                         isInitiator: false,
-                        stream: new MediaStream()
+                        stream: new MediaStream(),
                     };
 
                     // Add local stream to peer connection
@@ -396,7 +415,7 @@ const store = reactive<Store>({
                                     SocketServerEvents.SendCandidate,
                                     {
                                         toClientId: fromClientId,
-                                        iceCandidate: event.candidate
+                                        iceCandidate: event.candidate,
                                     }
                                 );
                             }
@@ -413,8 +432,8 @@ const store = reactive<Store>({
                                             videoActivated:
                                                 this.user.videoActivated,
                                             audioActivated:
-                                                this.user.audioActivated
-                                        }
+                                                this.user.audioActivated,
+                                        },
                                     })
                                 );
                             };
@@ -429,7 +448,7 @@ const store = reactive<Store>({
 
                                         this.syncStream({
                                             clientId: fromClientId,
-                                            state: payload
+                                            state: payload,
                                         });
                                     }
                                 } catch (error) {
@@ -451,7 +470,7 @@ const store = reactive<Store>({
                                     SocketServerEvents.SendAnswer,
                                     {
                                         toClientId: fromClientId,
-                                        sdpAnswer: connection.localDescription!
+                                        sdpAnswer: connection.localDescription!,
                                     }
                                 );
                             });
@@ -479,7 +498,7 @@ const store = reactive<Store>({
                     }
                 }
             );
-    }
+    },
 });
 
 store.initSocket();
