@@ -15,6 +15,7 @@ export type Room = {
     id: string | null;
     name?: string;
     podTitle?: string;
+    twitchHostName?: string;
     clients: Record<
         string,
         {

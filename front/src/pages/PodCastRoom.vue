@@ -17,6 +17,9 @@
                     :is-me="true"
                     :video-src="store.user.stream ?? null"
                     :client-id="store.user.id!"
+                    :is-host="
+                        store.user.twitchUserName === store.room.twitchHostName
+                    "
                     :peeps-no="randomInt(1, 105)"
                     :muted="true"
                     :fixedWidth="false"
@@ -46,7 +49,7 @@
             <ChatTitlePanel class="h-[75px]" />
 
             <iframe
-                src="https://prettych.at/chat?username=fredkisss&theme=Will"
+                :src="`https://prettych.at/chat?username=${store.room.twitchHostName}&theme=Will`"
                 frameborder="0"
                 class="w-full h-full"
             />

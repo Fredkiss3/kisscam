@@ -56,12 +56,11 @@ const store = reactive<Store>({
             await wait(1500);
         }
 
-        this.socket?.emit(
-            SocketServerEvents.CreateRoom,
+        this.socket?.emit(SocketServerEvents.CreateRoom, {
             roomName,
             twitchHostName,
-            podTitle
-        );
+            podTitle,
+        });
     },
 
     updateUserName({ username }) {
@@ -96,9 +95,12 @@ const store = reactive<Store>({
             await wait(1500);
         }
 
+        console.log({ user: this.user, room: this.room });
+
         this.socket?.emit(SocketServerEvents.JoinRoom, {
             roomId: id,
             clientName: this.user.name,
+            isHost: this.user.twitchUserName === this.room.twitchHostName,
         });
     },
 
@@ -240,27 +242,40 @@ const store = reactive<Store>({
                 console.log('connected');
                 this.user.id = store.socket!.id;
             })
-            .on(SocketClientEvents.RoomCreated, ({ roomId, roomName }) => {
-                this.room.id = roomId;
-                this.room.name = roomName;
-                this.currentStep = 'ROOM_CREATED';
-            })
-            .on(SocketClientEvents.RoomJoined, ({ roomName, clients }) => {
-                this.currentStep = 'ROOM_JOINED';
-                this.room.name = roomName;
-                const listClients: Record<
-                    string,
-                    { clientName: string; peepNo: number; isHost?: boolean }
-                > = {};
-                clients.forEach(({ clientId, clientName }) => {
-                    listClients[clientId] = {
-                        clientName,
-                        peepNo: randomInt(1, 10),
-                    };
-                });
+            .on(
+                SocketClientEvents.RoomCreated,
+                ({ roomId, roomName, podTitle, twitchHostName }) => {
+                    this.room.id = roomId;
+                    this.room.name = roomName;
+                    this.room.podTitle = podTitle;
+                    this.room.twitchHostName = twitchHostName;
+                    this.currentStep = 'ROOM_CREATED';
+                }
+            )
+            .on(
+                SocketClientEvents.RoomJoined,
+                ({ roomName, clients, podTitle, twitchHostName }) => {
+                    this.currentStep = 'ROOM_JOINED';
+                    this.room.name = roomName;
+                    this.room.podTitle = podTitle;
+                    this.room.twitchHostName = twitchHostName;
 
-                this.room.clients = listClients;
-            })
+                    const listClients: Record<
+                        string,
+                        { clientName: string; peepNo: number; isHost?: boolean }
+                    > = {};
+
+                    clients.forEach(({ clientId, clientName, isHost }) => {
+                        listClients[clientId] = {
+                            clientName,
+                            peepNo: randomInt(1, 10),
+                            isHost,
+                        };
+                    });
+
+                    this.room.clients = listClients;
+                }
+            )
             .on(SocketClientEvents.RoomNotFound, () => {
                 this.currentStep = 'ROOM_NOT_FOUND';
             })
