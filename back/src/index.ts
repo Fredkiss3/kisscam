@@ -2,13 +2,13 @@ import Fastify, { FastifyRequest } from 'fastify';
 import fastifyIO from 'fastify-socket.io';
 import cors from '@fastify/cors';
 import { Socket } from 'socket.io';
-import type { AddressInfo } from 'net';
 import dotenv from 'dotenv';
+import path from 'node:path';
 
 // Load .env file
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config({
-        path: `${__dirname}/.env.local`,
+        path: path.join(path.resolve(__dirname, '..'), `.env.local`),
     });
 }
 
@@ -65,22 +65,18 @@ server.ready().then(() => {
 
 // Start the server
 const start = async () => {
-    try {
-        await server.listen(8080, `0.0.0.0`);
+    server.listen(
+        { port: Number(process.env.PORT), host: `0.0.0.0` },
+        (err, address) => {
+            if (err) {
+                console.error(err);
+                server.log.error(err);
+                process.exit(1);
+            }
 
-        const address = server.server.address() as AddressInfo;
-        const port = typeof address === 'string' ? address : address?.port;
-
-        // @ts-ignore
-        console.log(
-            `Server listening at ${address?.address.toString()}:${port}`
-        );
-    } catch (err) {
-        console.error(err);
-
-        server.log.error(err);
-        process.exit(1);
-    }
+            console.log(`Server listening at ${address}`);
+        }
+    );
 };
 
 initClient()
