@@ -8,12 +8,14 @@
         "dist/**/*"
     ],
     "scripts": {
-        "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+        "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
+        "dev": "nodemon --watch ./index.ts --exec pnpm run build"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "nodemon": "^2.0.16",
         "typescript": "^4.6.4"
     }
 }
