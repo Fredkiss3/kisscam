@@ -16,28 +16,50 @@ export default async function (
     const { clientRepository, roomRepository, redisClient } =
         await getRepositories();
 
-    const onCreateRoom = async function (roomName: string) {
+    const onCreateRoom = async function ({
+        roomName,
+        twitchHostName,
+        podTitle,
+    }: {
+        roomName: string;
+        twitchHostName?: string;
+        podTitle?: string;
+    }) {
         const roomId = randomBytes(5).toString('hex');
 
         const room = await roomRepository.createAndSave({
             id: roomId,
             name: roomName,
+            twitchHostName: twitchHostName ?? '',
+            podTitle: podTitle ?? '',
         });
 
         // The room should expire after 24 hours
-        await redisClient.execute(['EXPIRE', `Room:${room.entityId}`, 86400]);
+        await redisClient.execute(['EXPIRE', `Room:${room.entityId}`, 86_400]);
 
-        clientSocket.emit(SocketClientEvents.RoomCreated, { roomId, roomName });
+        clientSocket.emit(SocketClientEvents.RoomCreated, {
+            roomId,
+            roomName,
+            twitchHostName,
+            podTitle,
+        });
 
-        console.log('Room created:', { roomId, roomName });
+        console.log('Room created:', {
+            roomId,
+            roomName,
+            twitchHostName,
+            podTitle,
+        });
     };
 
     const onJoinRoom = async function ({
         roomId,
         clientName,
+        isHost,
     }: {
         roomId: string;
         clientName: string;
+        isHost?: boolean;
     }) {
         const room = await roomRepository
             .search()
@@ -73,6 +95,7 @@ export default async function (
             id: clientId,
             name: clientName,
             roomId,
+            isHost: isHost ?? false,
         });
 
         // get all the clients in the room
@@ -88,9 +111,12 @@ export default async function (
         clientSocket.emit(SocketClientEvents.RoomJoined, {
             roomId,
             roomName: room.name!,
+            twitchHostName: room.twitchHostName,
+            podTitle: room.podTitle,
             clients: clients.map((client) => ({
                 clientId: client.id!,
                 clientName: client.name!,
+                isHost: client.isHost ?? false,
             })),
         });
 

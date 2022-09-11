@@ -5,6 +5,7 @@ export class Client extends Entity {
     id?: string;
     name?: string;
     roomId?: string;
+    isHost?: boolean;
 
     constructor(schema: Schema<any>, id: string, data?: EntityData) {
         super(schema, id, data);
@@ -14,6 +15,8 @@ export class Client extends Entity {
 export class Room extends Entity {
     id?: string;
     name?: string;
+    twitchHostName?: string;
+    podTitle?: string;
 
     constructor(schema: Schema<any>, id: string, data?: EntityData) {
         super(schema, id, data);
@@ -31,6 +34,9 @@ const clientSchema = new Schema(Client, {
     roomId: {
         type: 'string',
     },
+    isHost: {
+        type: 'boolean',
+    },
 });
 
 const roomSchema = new Schema(Room, {
@@ -38,6 +44,12 @@ const roomSchema = new Schema(Room, {
         type: 'string',
     },
     name: {
+        type: 'string',
+    },
+    twitchHostName: {
+        type: 'string',
+    },
+    podTitle: {
         type: 'string',
     },
 });

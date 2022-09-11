@@ -36,6 +36,8 @@ export interface ClientEventMap {
     [SocketClientEvents.RoomCreated]: (arg: {
         roomId: string;
         roomName: string;
+        twitchHostName?: string;
+        podTitle?: string;
     }) => void;
     [SocketClientEvents.NewClient]: (arg: {
         clientId: string;
@@ -44,9 +46,12 @@ export interface ClientEventMap {
     [SocketClientEvents.RoomJoined]: (arg: {
         roomId: string;
         roomName: string;
+        twitchHostName?: string;
+        podTitle?: string;
         clients: {
             clientId: string;
             clientName: string;
+            isHost?: boolean;
         }[];
     }) => void;
     [SocketClientEvents.RoomNotFound]: () => void;
@@ -62,10 +67,15 @@ export enum SocketServerEvents {
 }
 
 export interface ServerEventMap {
-    [SocketServerEvents.CreateRoom]: (roomName: string) => void;
+    [SocketServerEvents.CreateRoom]: (arg: {
+        roomName: string;
+        twitchHostName?: string;
+        podTitle?: string;
+    }) => void;
     [SocketServerEvents.JoinRoom]: (arg: {
         roomId: string;
         clientName: string;
+        isHost?: boolean;
     }) => void;
 
     [SocketServerEvents.SendOffer]: (arg: {
