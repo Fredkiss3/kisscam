@@ -5,13 +5,16 @@
   </a>
 </p>
 
-# KISSCAM ❤️📸
+# KISSCAM ❤️📸 
+
+
+### KISSCAM helps you host your video podcasts on twitch without any constraint
+### KISSCAM is a web app that allows you to call your friends and family without a time limit.
 
 
 ![Build Status Back](https://github.com/Fredkiss3/kisscam/workflows/Continous%20Integration%20For%20Backend/badge.svg?branch=main)
 ![Build Status Front](https://github.com/Fredkiss3/kisscam/workflows/CI%2FCD%20For%20the%20Frontend/badge.svg?branch=main)
 
-KISSCAM is a web application that allows you to call your friends and family for how much time you want.
 
 
 # Requirements
