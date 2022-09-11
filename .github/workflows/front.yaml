@@ -9,6 +9,7 @@ on:
     paths:
       - "front/**"
       - .github/workflows/front.yaml
+      - ./pnpm-lock.yaml
     branches:
       - main
 
