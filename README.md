@@ -1,7 +1,7 @@
 
 <p align="center">
   <a href="https://kisscam.fredkiss.dev">
-    <img alt="Design" src="./design/result.png" width="100%" />
+    <img alt="Design" src="./design/KISSCAM-V-2.png" width="100%" />
   </a>
 </p>
 
