@@ -12,3 +12,4 @@ services:
             - '127.0.0.1:8082:8080'
         environment:
             - REDIS_URL=redis://redis:6379
+            - PORT=8080
