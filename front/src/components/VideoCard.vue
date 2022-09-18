@@ -24,7 +24,7 @@
             <div v-if="!videoSrc || !videoActivated" :class="classes.img">
                 <img
                     :src="`/Bust/peep-${peepsNo}.png`"
-                    alt="You peeps"
+                    alt="Your peep"
                     class="rounded-full h-full w-full object-cover object-center tranform"
                 />
             </div>
@@ -66,10 +66,6 @@ interface Props {
     isHost?: boolean;
 }
 
-interface Events {
-    (e: 'pin', clientId: string): void;
-}
-
 const props = withDefaults(defineProps<Props>(), {
     class: '',
     muted: false,
@@ -82,12 +78,11 @@ const props = withDefaults(defineProps<Props>(), {
     fixedWidth: true,
 });
 
-const emit = defineEmits<Events>();
-
 const classes = computed(() => {
     return {
         parent: {
-            'rounded-lg relative bg-hollow h-[320px]': true,
+            'rounded-lg relative bg-hollow h-[320px] w-full max-w-[450px]':
+                true,
             'border-2 border-primary': props.talking,
             [props.class]: true,
             'h-[200px] w-[250px]': props.minimized,

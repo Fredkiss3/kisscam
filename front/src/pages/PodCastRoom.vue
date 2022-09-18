@@ -11,7 +11,9 @@
         <div class="flex flex-col gap-6 col-span-6 items-start w-full h-full">
             <ControlsPanel variant="simple" />
 
-            <div class="grid grid-cols-2 gap-6 justify-center w-full">
+            <div
+                class="grid grid-cols-2 gap-6 w-full place-content-center place-items-center"
+            >
                 <VideoCard
                     name="You"
                     :is-me="true"
@@ -27,8 +29,14 @@
                 />
 
                 <VideoCard
-                    v-for="(client, clientId) in store.room.clients"
+                    v-for="(client, clientId, index) in store.room.clients"
                     :key="clientId"
+                    :class="`${
+                        Object.keys(store.room.clients).length % 2 === 0 &&
+                        index === Object.keys(store.room.clients).length - 1
+                            ? 'col-span-2'
+                            : 'col-span-1'
+                    }`"
                     :fixedWidth="false"
                     :name="client.clientName"
                     :client-id="clientId"
