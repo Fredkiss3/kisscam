@@ -1,0 +1,17 @@
+node {
+    def app
+    stage ('Clone'){
+        checkout scm
+    }
+    
+    stage ('Build images'){
+        app = docker.build("tag/kisscam")
+    }
+    
+    stage ('Test image'){
+        withDockerContainer("tag/kisscam"){ 
+            sh "echo 'hello world'" 
+        }
+        sh "docker ps"
+    }
+}
