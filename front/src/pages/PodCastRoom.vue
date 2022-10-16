@@ -47,6 +47,7 @@
                     :video-activated="
                         store.room.clients[clientId].videoActivated
                     "
+                    @copy-embed="copyEmbedLinkToClipboard(clientId)"
                 />
             </div>
         </div>
@@ -132,7 +133,11 @@ onUnmounted(() => {
     store.leaveRoom();
 });
 
-/**
- * https://prettych.at/chat?username=fredkisss&theme=Will
- */
+async function copyEmbedLinkToClipboard(id: string) {
+    const embedLink = `${window.location.origin}/#/embed/${hashFromID.value}/${id}`;
+    console.log({ embedLink });
+
+    await navigator.clipboard.writeText(embedLink);
+    alert('The embed link has been copied to your clipboard');
+}
 </script>

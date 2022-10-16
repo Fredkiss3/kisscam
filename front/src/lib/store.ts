@@ -76,18 +76,28 @@ const store = reactive<Store>({
         localStorage.setItem('userInfos', JSON.stringify(userInfos));
     },
 
-    async joinRoom({ id, username }) {
+    async joinRoom({ id, username, embed, filter }) {
         this.currentStep = 'JOINING_ROOM';
         this.user.name = username;
         this.room.id = id;
 
+        if (embed) {
+            this.user.isEmbed = true;
+            this.user.videoActivated = false;
+            this.user.audioActivated = false;
+            this.user.idToFilter = filter;
+        }
+
         userInfos = {
             ...userInfos,
             name: username,
-            videoActivated: this.user.videoActivated,
-            audioActivated: this.user.audioActivated,
+            videoActivated: embed ? false : this.user.videoActivated,
+            audioActivated: embed ? false : this.user.audioActivated,
         };
-        localStorage.setItem('userInfos', JSON.stringify(userInfos));
+
+        if (!embed) {
+            localStorage.setItem('userInfos', JSON.stringify(userInfos));
+        }
 
         // only wait in development mode
         // @ts-ignore
@@ -95,12 +105,11 @@ const store = reactive<Store>({
             await wait(1500);
         }
 
-        console.log({ user: this.user, room: this.room });
-
         this.socket?.emit(SocketServerEvents.JoinRoom, {
             roomId: id,
             clientName: this.user.name,
             isHost: this.user.twitchUserName === this.room.twitchHostName,
+            asEmbed: embed,
         });
     },
 
@@ -196,8 +205,9 @@ const store = reactive<Store>({
 
     syncStream({ clientId, state }) {
         const peer = this.peers[clientId];
+        const isEmbed = this.room.clients[clientId]?.isEmbed;
 
-        if (peer) {
+        if (peer && !isEmbed) {
             const { stream } = peer;
 
             if (stream) {
@@ -262,16 +272,24 @@ const store = reactive<Store>({
 
                     const listClients: Record<
                         string,
-                        { clientName: string; peepNo: number; isHost?: boolean }
+                        {
+                            clientName: string;
+                            peepNo: number;
+                            isHost?: boolean;
+                            isEmbed: boolean;
+                        }
                     > = {};
 
-                    clients.forEach(({ clientId, clientName, isHost }) => {
-                        listClients[clientId] = {
-                            clientName,
-                            peepNo: randomInt(1, 10),
-                            isHost,
-                        };
-                    });
+                    clients.forEach(
+                        ({ clientId, clientName, isHost, isEmbed }) => {
+                            listClients[clientId] = {
+                                clientName,
+                                peepNo: randomInt(1, 10),
+                                isHost,
+                                isEmbed: !!isEmbed,
+                            };
+                        }
+                    );
 
                     this.room.clients = listClients;
                 }
@@ -279,30 +297,51 @@ const store = reactive<Store>({
             .on(SocketClientEvents.RoomNotFound, () => {
                 this.currentStep = 'ROOM_NOT_FOUND';
             })
-            .on(SocketClientEvents.NewClient, ({ clientId, clientName }) => {
-                const clientInRoom = this.room.clients[clientId];
+            .on(
+                SocketClientEvents.NewClient,
+                ({ clientId, clientName, isEmbed }) => {
+                    const clientInRoom = this.room.clients[clientId];
 
-                if (!clientInRoom) {
-                    this.room.clients[clientId] = {
-                        clientName,
-                        peepNo: randomInt(1, 105),
-                    };
+                    if (!clientInRoom) {
+                        if (
+                            this.user.isEmbed &&
+                            clientId !== this.user.idToFilter
+                        ) {
+                            return;
+                        }
 
-                    this.peers[clientId] = {
-                        connection: createPeerConnection(),
-                        isInitiator: true,
-                        stream: new MediaStream(),
-                    };
+                        this.room.clients[clientId] = {
+                            clientName,
+                            peepNo: randomInt(1, 105),
+                            isEmbed: !!isEmbed,
+                        };
 
-                    const stream = this.user.stream;
-                    if (stream) {
+                        this.peers[clientId] = {
+                            connection: createPeerConnection(),
+                            isInitiator: true,
+                            stream: new MediaStream(),
+                        };
+
+                        const stream = this.user.stream;
+
                         const { connection } = this.peers[clientId];
-                        // Add local stream to peer connection
-                        stream
-                            .getTracks()
-                            .forEach((track) =>
-                                connection.addTrack(track, stream)
-                            );
+                        // connect only one way when embed
+                        if (this.user.isEmbed) {
+                            connection.addTransceiver('audio', {
+                                direction: 'recvonly',
+                            });
+                            connection.addTransceiver('video', {
+                                direction: 'recvonly',
+                            });
+                        }
+                        if (stream) {
+                            // Add local stream to peer connection only if not embed
+                            stream
+                                .getTracks()
+                                .forEach((track) =>
+                                    connection.addTrack(track, stream)
+                                );
+                        }
 
                         // Send candidates when there are ones
                         connection.onicecandidate = (event) => {
@@ -319,6 +358,13 @@ const store = reactive<Store>({
 
                         // Add remote stream to peer connection
                         connection.ontrack = (event) => {
+                            console.log(
+                                `Received stream from peer "${clientId}": `,
+                                event.streams[0],
+                                'client data => ',
+                                this.room.clients[clientId]
+                            );
+
                             this.peers[clientId].stream = event.streams[0];
                         };
 
@@ -360,27 +406,48 @@ const store = reactive<Store>({
                         };
 
                         connection.onnegotiationneeded = (ev) => {
-                            connection
-                                .createOffer()
-                                .then((sdp) =>
-                                    connection.setLocalDescription(sdp)
-                                )
-                                .then(() => {
-                                    this.socket?.emit(
-                                        SocketServerEvents.SendOffer,
-                                        {
-                                            toClientId: clientId,
-                                            sdpOffer:
-                                                connection.localDescription!,
-                                        }
-                                    );
-                                });
+                            if (this.user.isEmbed) {
+                                connection
+                                    .createOffer({
+                                        offerToReceiveAudio: true,
+                                        offerToReceiveVideo: true,
+                                    })
+                                    .then((sdp) =>
+                                        connection.setLocalDescription(sdp)
+                                    )
+                                    .then(() => {
+                                        this.socket?.emit(
+                                            SocketServerEvents.SendOffer,
+                                            {
+                                                toClientId: clientId,
+                                                sdpOffer:
+                                                    connection.localDescription!,
+                                            }
+                                        );
+                                    });
+                            } else {
+                                connection
+                                    .createOffer()
+                                    .then((sdp) =>
+                                        connection.setLocalDescription(sdp)
+                                    )
+                                    .then(() => {
+                                        this.socket?.emit(
+                                            SocketServerEvents.SendOffer,
+                                            {
+                                                toClientId: clientId,
+                                                sdpOffer:
+                                                    connection.localDescription!,
+                                            }
+                                        );
+                                    });
+                            }
                         };
 
                         this.peers[clientId].dataChannel = channel;
                     }
                 }
-            })
+            )
             .on(SocketClientEvents.ClientDisconnected, ({ clientId }) => {
                 const { [clientId]: client, ...otherClients } =
                     this.room.clients;
@@ -394,29 +461,62 @@ const store = reactive<Store>({
                     delete this.peers[clientId];
                 }
             })
-            .on(SocketClientEvents.NewOffer, ({ fromClientId, sdpOffer }) => {
-                const peer = this.peers[fromClientId];
+            .on(
+                SocketClientEvents.NewOffer,
+                ({ fromClientId, sdpOffer, isFromEmbed }) => {
+                    const peer = this.peers[fromClientId];
 
-                if (peer) {
-                    return;
-                } else {
-                    this.peers[fromClientId] = {
-                        connection: createPeerConnection(),
-                        isInitiator: false,
-                        stream: new MediaStream(),
-                    };
+                    if (
+                        this.user.isEmbed &&
+                        fromClientId !== this.user.idToFilter
+                    ) {
+                        return;
+                    }
 
-                    // Add local stream to peer connection
-                    const stream = this.user.stream;
+                    if (peer) {
+                        return;
+                    } else {
+                        this.peers[fromClientId] = {
+                            connection: createPeerConnection(),
+                            isInitiator: false,
+                            stream: new MediaStream(),
+                        };
 
-                    if (stream) {
+                        // Add local stream to peer connection
                         const { connection } = this.peers[fromClientId];
 
-                        stream
-                            .getTracks()
-                            .forEach((track) =>
-                                connection.addTrack(track, stream)
-                            );
+                        // connect only one way when embed
+                        if (this.user.isEmbed) {
+                            connection.addTransceiver('audio', {
+                                direction: 'recvonly',
+                            });
+                            connection.addTransceiver('video', {
+                                direction: 'recvonly',
+                            });
+                        }
+
+                        const localStream = this.user.stream;
+
+                        if (localStream) {
+                            // Add local stream to peer connection only if not embed
+                            localStream
+                                .getTracks()
+                                .forEach((track) =>
+                                    connection.addTrack(track, localStream)
+                                );
+
+                            // do not wait for any stream return from embed
+                            // this mechanism prevents errors because the embed does not return
+                            // any stream
+                            // if (isFromEmbed) {
+                            //     connection.addTransceiver('audio', {
+                            //         direction: 'sendonly',
+                            //     });
+                            //     connection.addTransceiver('video', {
+                            //         direction: 'sendonly',
+                            //     });
+                            // }
+                        }
 
                         // Add remote stream to peer connection
                         connection.ontrack = (event) => {
@@ -491,7 +591,7 @@ const store = reactive<Store>({
                             });
                     }
                 }
-            })
+            )
             .on(SocketClientEvents.NewAnswer, ({ fromClientId, sdpAnswer }) => {
                 const peer = this.peers[fromClientId];
 

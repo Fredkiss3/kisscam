@@ -6,6 +6,7 @@ export class Client extends Entity {
     name?: string;
     roomId?: string;
     isHost?: boolean;
+    isEmbed?: boolean;
 
     constructor(schema: Schema<any>, id: string, data?: EntityData) {
         super(schema, id, data);
@@ -35,6 +36,9 @@ const clientSchema = new Schema(Client, {
         type: 'string',
     },
     isHost: {
+        type: 'boolean',
+    },
+    isEmbed: {
         type: 'boolean',
     },
 });

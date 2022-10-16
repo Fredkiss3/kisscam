@@ -19,15 +19,17 @@
                 :video-activated="store.user.videoActivated"
             />
 
+            <!-- v-if="client." -->
             <VideoCard
-                v-for="(client, clientId) in store.room.clients"
-                :key="clientId"
+                v-for="client in clients"
+                :key="client.id"
                 :name="client.clientName"
-                :client-id="clientId"
+                :client-id="client.id"
                 :peeps-no="client.peepNo"
-                :video-src="store.peers[clientId]?.stream ?? null"
-                :muted="!store.room.clients[clientId].audioActivated"
-                :video-activated="store.room.clients[clientId].videoActivated"
+                :video-src="store.peers[client.id]?.stream ?? null"
+                :muted="!store.room.clients[client.id].audioActivated"
+                :video-activated="store.room.clients[client.id].videoActivated"
+                @copy-embed="copyEmbedLinkToClipboard(client.id)"
             />
         </div>
 
@@ -42,7 +44,7 @@
 
 <script setup lang="ts">
 // utils & functions
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, watchEffect } from 'vue';
 import { randomInt, gotoHashURL } from '../lib/functions';
 import { useStore } from '../lib/store';
 
@@ -54,6 +56,23 @@ import ControlsPanel from '../components/ControlsPanel.vue';
 
 const store = useStore();
 
+watchEffect(() => {
+    console.log({
+        clients: store.room.clients,
+    });
+});
+
+const clients = computed(() => {
+    return Object.entries(store.room.clients)
+        .filter(([_, client]) => {
+            return !client.isEmbed;
+        })
+        .map(([id, client]) => ({
+            id,
+            ...client,
+        }));
+});
+
 const hashFromID = computed(() => {
     const roomRegex = /\/room\/([a-z0-9]{10})$/;
     const hash = window.location.hash;
@@ -63,7 +82,7 @@ const hashFromID = computed(() => {
 onMounted(async () => {
     if (!store.user.name) {
         gotoHashURL('/join-room', {
-            'room-id': hashFromID.value
+            'room-id': hashFromID.value,
         });
         alert(`You must set a username before joining a room`);
         return;
@@ -72,14 +91,14 @@ onMounted(async () => {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: true,
-            audio: true
+            audio: true,
         });
 
         if (stream) {
             store.user.stream = stream;
             store.joinRoom({
                 id: hashFromID.value,
-                username: store.user.name
+                username: store.user.name,
             });
         } else {
             alert(
@@ -87,14 +106,24 @@ onMounted(async () => {
             );
         }
     } catch (error) {
+        console.error(error);
+
         alert(
             'You must allow access to your camera and microphone to join a room'
         );
         gotoHashURL('/join-room', {
-            'room-id': hashFromID.value
+            'room-id': hashFromID.value,
         });
     }
 });
+
+async function copyEmbedLinkToClipboard(id: string) {
+    const embedLink = `${window.location.origin}/#/embed/${hashFromID.value}/${id}`;
+    console.log({ embedLink });
+
+    await navigator.clipboard.writeText(embedLink);
+    alert('The embed link has been copied to your clipboard');
+}
 
 onUnmounted(() => {
     store.leaveRoom();

@@ -43,8 +43,9 @@ import PodCastRoom from './pages/PodCastRoom.vue';
 import Button from './components/Button.vue';
 import { XIcon } from '@heroicons/vue/solid';
 import JoinPodRoom from './pages/JoinPodRoom.vue';
+import Embed from './pages/Embed.vue';
 
-const showFooter = ref(true);
+const showFooter = ref(false);
 
 /**
  * Route management
@@ -72,11 +73,14 @@ const currentView = computed(() => {
     // check if path corresponds to a room
     const roomRegex = /\/room\/([a-z0-9]{10})$/;
     const podcastRoomRegex = /\/pod\/([a-z0-9]{10})$/;
+    const embedRoomRegex = /\/embed\/([a-z0-9]{10})\/(.+)$/;
 
     if (roomRegex.test(path)) {
         return Room;
     } else if (podcastRoomRegex.test(path)) {
         return PodCastRoom;
+    } else if (embedRoomRegex.test(path)) {
+        return Embed;
     } else {
         // check if path corresponds to a route
         if (path in routes) {

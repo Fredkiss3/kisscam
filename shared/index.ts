@@ -17,6 +17,7 @@ export interface ClientEventMap {
     [SocketClientEvents.NewOffer]: (arg: {
         fromClientId: string;
         sdpOffer: object;
+        isFromEmbed?: boolean;
     }) => void;
 
     [SocketClientEvents.NewCandidate]: (arg: {
@@ -42,6 +43,7 @@ export interface ClientEventMap {
     [SocketClientEvents.NewClient]: (arg: {
         clientId: string;
         clientName: string;
+        isEmbed?: boolean;
     }) => void;
     [SocketClientEvents.RoomJoined]: (arg: {
         roomId: string;
@@ -52,6 +54,7 @@ export interface ClientEventMap {
             clientId: string;
             clientName: string;
             isHost?: boolean;
+            isEmbed?: boolean;
         }[];
     }) => void;
     [SocketClientEvents.RoomNotFound]: () => void;
@@ -76,6 +79,7 @@ export interface ServerEventMap {
         roomId: string;
         clientName: string;
         isHost?: boolean;
+        asEmbed?: boolean;
     }) => void;
 
     [SocketServerEvents.SendOffer]: (arg: {

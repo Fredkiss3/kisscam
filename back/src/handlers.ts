@@ -56,10 +56,12 @@ export default async function (
         roomId,
         clientName,
         isHost,
+        asEmbed,
     }: {
         roomId: string;
         clientName: string;
         isHost?: boolean;
+        asEmbed?: boolean;
     }) {
         const room = await roomRepository
             .search()
@@ -96,6 +98,7 @@ export default async function (
             name: clientName,
             roomId,
             isHost: isHost ?? false,
+            isEmbed: !!asEmbed,
         });
 
         // get all the clients in the room
@@ -117,6 +120,7 @@ export default async function (
                 clientId: client.id!,
                 clientName: client.name!,
                 isHost: client.isHost ?? false,
+                isEmbed: client.isEmbed,
             })),
         });
 
@@ -124,6 +128,7 @@ export default async function (
         clientSocket.to(roomId).emit(SocketClientEvents.NewClient, {
             clientId,
             clientName,
+            isEmbed: !!asEmbed,
         });
 
         console.log(

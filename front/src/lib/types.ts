@@ -9,6 +9,8 @@ export type User = {
     stream: MediaStream | null;
     videoActivated?: boolean;
     audioActivated?: boolean;
+    isEmbed?: boolean;
+    idToFilter?: string;
 };
 
 export type Room = {
@@ -24,6 +26,7 @@ export type Room = {
             isHost?: boolean;
             videoActivated?: boolean;
             audioActivated?: boolean;
+            isEmbed: boolean;
         }
     >;
 };
@@ -55,7 +58,12 @@ export type Store = {
         twitchHostName?: string;
         podTitle?: string;
     }) => Promise<void>;
-    joinRoom: (args: { id: string; username: string }) => Promise<void>;
+    joinRoom: (args: {
+        id: string;
+        username: string;
+        embed?: boolean;
+        filter?: string;
+    }) => Promise<void>;
     updateUserName: (args: { username: string }) => void;
     leaveRoom: () => void;
     initSocket: () => void;

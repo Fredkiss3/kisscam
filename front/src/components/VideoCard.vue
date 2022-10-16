@@ -35,6 +35,14 @@
                     <MutedMicIcon v-if="muted" class="text-danger h-4" />
                 </Tag>
                 <Tag>{{ name }}</Tag>
+                <Button
+                    variant="hollow"
+                    square
+                    @click="emit('copyEmbed')"
+                    v-if="!isMe"
+                >
+                    <LinkIcon class="text-white h-4" />
+                </Button>
             </div>
         </div>
     </div>
@@ -49,7 +57,7 @@ import Tag from '../components/Tag.vue';
 import Button from '../components/Button.vue';
 import MutedMicIcon from '../components/MutedMicIcon.vue';
 import MicIcon from '../components/MicIcon.vue';
-import { HomeIcon } from '@heroicons/vue/solid';
+import { HomeIcon, LinkIcon } from '@heroicons/vue/solid';
 
 interface Props {
     class?: string;
@@ -66,6 +74,10 @@ interface Props {
     isHost?: boolean;
 }
 
+interface Events {
+    (e: 'copyEmbed'): void;
+}
+
 const props = withDefaults(defineProps<Props>(), {
     class: '',
     muted: false,
@@ -77,6 +89,8 @@ const props = withDefaults(defineProps<Props>(), {
     videoActivated: false,
     fixedWidth: true,
 });
+
+const emit = defineEmits<Events>();
 
 const classes = computed(() => {
     return {
