@@ -72,11 +72,6 @@
 </template>
 
 <script setup lang="ts">
-// utils & functions
-import { computed, onMounted, onUnmounted } from 'vue';
-import { randomInt, gotoHashURL } from '../lib/functions';
-import { useStore } from '../lib/store';
-
 // components
 import NotFound from '../pages/NotFound.vue';
 import Loader from '../components/Loader.vue';
@@ -84,13 +79,16 @@ import VideoCard from '../components/VideoCard.vue';
 import ControlsPanel from '../components/ControlsPanel.vue';
 import ChatTitlePanel from '../components/ChatTitlePanel.vue';
 
-const store = useStore();
+// utils & functions
+import { computed, onMounted, onUnmounted } from 'vue';
+import { randomInt, gotoHashURL } from '../lib/functions';
+import { useStore } from '../lib/store';
+import { useRoute, useRouter } from 'vue-router';
 
-const hashFromID = computed(() => {
-    const podRegex = /\/pod\/([a-z0-9]{10})$/;
-    const hash = window.location.hash;
-    return hash.match(podRegex)![1];
-});
+const router = useRouter();
+const route = useRoute();
+
+const store = useStore();
 
 const clients = computed(() => {
     return Object.entries(store.room.clients)
@@ -105,8 +103,11 @@ const clients = computed(() => {
 
 onMounted(async () => {
     if (!store.user.name) {
-        gotoHashURL('/join-pod-room', {
-            'room-id': hashFromID.value,
+        router.push({
+            name: 'join-pod-room',
+            query: {
+                roomId: route.params.roomId,
+            },
         });
         alert(`You must set a username before joining a room`);
         return;
@@ -121,7 +122,7 @@ onMounted(async () => {
         if (stream) {
             store.user.stream = stream;
             store.joinRoom({
-                id: hashFromID.value,
+                id: route.params.roomId as string,
                 username: store.user.name,
             });
         } else {
@@ -134,8 +135,11 @@ onMounted(async () => {
         alert(
             'You must allow access to your camera and microphone to join a room'
         );
-        gotoHashURL('/join-pod-room', {
-            'room-id': hashFromID.value,
+        router.push({
+            name: 'join-pod-room',
+            query: {
+                roomId: route.params.roomId,
+            },
         });
     }
 });
@@ -145,7 +149,7 @@ onUnmounted(() => {
 });
 
 async function copyEmbedLinkToClipboard(id: string) {
-    const embedLink = `${window.location.origin}/#/embed/${hashFromID.value}/${id}`;
+    const embedLink = `${window.location.origin}/embed/${route.params.roomId}/${id}`;
     await navigator.clipboard.writeText(embedLink);
     alert('The embed link has been copied to your clipboard');
 }

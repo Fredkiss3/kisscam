@@ -77,7 +77,7 @@
                 square
                 class="py-3 px-3"
                 title="Exit Room"
-                href="#/"
+                href="/"
             >
                 <LogoutIcon class="h-6" />
             </Link>

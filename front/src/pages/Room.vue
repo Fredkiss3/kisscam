@@ -19,7 +19,6 @@
                 :video-activated="store.user.videoActivated"
             />
 
-            <!-- v-if="client." -->
             <VideoCard
                 v-for="client in clients"
                 :key="client.id"
@@ -44,8 +43,8 @@
 
 <script setup lang="ts">
 // utils & functions
-import { computed, onMounted, onUnmounted, watchEffect } from 'vue';
-import { randomInt, gotoHashURL } from '../lib/functions';
+import { computed, onMounted, onUnmounted, watch, watchEffect } from 'vue';
+import { randomInt } from '../lib/functions';
 import { useStore } from '../lib/store';
 
 // components
@@ -53,6 +52,10 @@ import NotFound from '../pages/NotFound.vue';
 import Loader from '../components/Loader.vue';
 import VideoCard from '../components/VideoCard.vue';
 import ControlsPanel from '../components/ControlsPanel.vue';
+import { useRoute, useRouter } from 'vue-router';
+
+const router = useRouter();
+const route = useRoute();
 
 const store = useStore();
 
@@ -67,16 +70,13 @@ const clients = computed(() => {
         }));
 });
 
-const hashFromID = computed(() => {
-    const roomRegex = /\/room\/([a-z0-9]{10})$/;
-    const hash = window.location.hash;
-    return hash.match(roomRegex)![1];
-});
-
 onMounted(async () => {
     if (!store.user.name) {
-        gotoHashURL('/join-room', {
-            'room-id': hashFromID.value,
+        router.push({
+            name: 'join-call-room',
+            query: {
+                roomId: route.params.roomId,
+            },
         });
         alert(`You must set a username before joining a room`);
         return;
@@ -91,7 +91,7 @@ onMounted(async () => {
         if (stream) {
             store.user.stream = stream;
             store.joinRoom({
-                id: hashFromID.value,
+                id: route.params.roomId as string,
                 username: store.user.name,
             });
         } else {
@@ -105,14 +105,17 @@ onMounted(async () => {
         alert(
             'You must allow access to your camera and microphone to join a room'
         );
-        gotoHashURL('/join-room', {
-            'room-id': hashFromID.value,
+        router.push({
+            name: 'join-call-room',
+            query: {
+                roomId: route.params.roomId,
+            },
         });
     }
 });
 
 async function copyEmbedLinkToClipboard(id: string) {
-    const embedLink = `${window.location.origin}/#/embed/${hashFromID.value}/${id}`;
+    const embedLink = `${window.location.origin}/embed/${route.params.roomId}/${id}`;
     await navigator.clipboard.writeText(embedLink);
     alert('The embed link has been copied to your clipboard');
 }

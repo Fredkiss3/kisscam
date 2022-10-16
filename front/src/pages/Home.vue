@@ -1,13 +1,13 @@
 <template>
     <div class="h-screen flex flex-col items-center justify-center gap-4">
         <h1 class="font-bold text-4xl">KISS-CAM ❤️📸</h1>
-        <Link href="#/create-podcast-room" variant="danger">
+        <Link href="/create-podcast-room" variant="danger">
             Create a podcast Room <MicrophoneIcon class="h-4" />
         </Link>
-        <Link href="#/create-room">
+        <Link href="/create-room">
             Create a Room <PlusIcon class="h-4" />
         </Link>
-        <Link href="#/join-room" variant="hollow">
+        <Link href="/join-room" variant="hollow">
             Join a Room <ArrowRightIcon class="h-4" />
         </Link>
     </div>

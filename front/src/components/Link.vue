@@ -1,8 +1,7 @@
-
 <template>
-    <a :href="href" :class="classes" :title="title">
+    <router-link :to="href" :class="classes" :title="title">
         <slot />
-    </a>
+    </router-link>
 </template>
 
 <script setup lang="ts">
@@ -12,7 +11,7 @@ interface Props {
     class?: string;
     variant?: 'primary' | 'danger' | 'hollow';
     title?: string;
-    href?: string;
+    href: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -25,9 +24,9 @@ const classes = computed(() => {
         'bg-primary': props.variant === 'primary',
         'bg-danger': props.variant === 'danger',
         'bg-hollow': props.variant === 'hollow',
-        'py-2 px-4 rounded-md font-bold text-white flex gap-2 items-center': true,
-        [props.class]: true
+        'py-2 px-4 rounded-md font-bold text-white flex gap-2 items-center':
+            true,
+        [props.class]: true,
     };
 });
-
 </script>

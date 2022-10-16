@@ -12,7 +12,8 @@
     "dependencies": {
         "@heroicons/vue": "^1.0.6",
         "socket.io-client": "^4.5.1",
-        "vue": "^3.2.25"
+        "vue": "^3.2.25",
+        "vue-router": "4"
     },
     "devDependencies": {
         "@kisscam/shared": "workspace:^1.0.0",

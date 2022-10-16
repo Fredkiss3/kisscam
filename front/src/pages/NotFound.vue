@@ -2,10 +2,10 @@
     <div class="h-screen flex items-center justify-center flex-col gap-4">
         <h1>{{ props.message }}</h1>
 
-        <a href="#/" class="flex gap-2 items-center underline">
+        <router-link to="/" class="flex gap-2 items-center underline">
             <ArrowLeftIcon class="h-4" />
             Go Home
-        </a>
+        </router-link>
     </div>
 </template>
 
@@ -17,6 +17,6 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    message: '404 - Page not found'
+    message: '404 - Page not found',
 });
 </script>

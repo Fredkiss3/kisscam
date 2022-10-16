@@ -27,21 +27,23 @@
             </Button>
         </form>
 
-        <a href="#/" class="flex gap-2 items-center underline">
+        <router-link to="/" class="flex gap-2 items-center underline">
             <ArrowLeftIcon class="h-4" />
             Go back
-        </a>
+        </router-link>
     </div>
 </template>
 
 <script setup lang="ts">
 import Input from '../components/Input.vue';
 import Button from '../components/Button.vue';
-
 import { ArrowLeftIcon } from '@heroicons/vue/outline';
+
 import { useStore } from '../lib/store';
 import { reactive, ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 
+const router = useRouter();
 const store = useStore();
 
 const isLoading = ref(false);
@@ -49,9 +51,9 @@ const isLoading = ref(false);
 const qs = new URLSearchParams(window.location.search);
 
 const data = reactive({
-    id: qs.get('room-id') || '',
+    id: qs.get('roomId') || '',
     username: store.user.name,
-    errorOnID: null as string | null
+    errorOnID: null as string | null,
 });
 
 watch(
@@ -68,7 +70,12 @@ function handleSubmit() {
 
     if (roomIDRegex.test(data.id)) {
         store.updateUserName({ username: data.username });
-        window.location.hash = `/room/${data.id}`;
+        router.push({
+            name: 'call-room',
+            params: {
+                roomId: data.id,
+            },
+        });
     } else {
         data.errorOnID =
             'Invalid room ID, it should be an 10 characters long alphanumeric string, ex: abcdef1234';

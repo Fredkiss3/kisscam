@@ -2,9 +2,9 @@
     <div :class="classes.parent">
         <video
             :class="`rounded-lg h-full w-full object-cover object-center ${
-                !client.videoActivated && 'hidden'
+                client && !client.videoActivated && 'hidden'
             }`"
-            v-if="client.stream"
+            v-if="client && client.stream"
             ref="videoRef"
             autoplay
             muted="false"
@@ -17,20 +17,61 @@
         >
             <div
                 :class="classes.img"
-                v-if="!client.stream || !client.videoActivated"
+                v-if="client && (!client.stream || !client.videoActivated)"
             >
                 <img
                     :src="`/Bust/peep-${client.peepNo}.png`"
                     alt="Your peep"
-                    class="rounded-full h-full w-full object-cover object-center tranform"
+                    class="rounded-full h-full w-full object-cover object-center"
                 />
+            </div>
+
+            <div
+                class="rounded-full bg-dark h-40 w-40 flex items-center justify-center p-4"
+                v-if="!client && store.currentStep !== 'JOINING_ROOM'"
+            >
+                <OfflineIcon class="rounded-full h-20 text-danger" />
+            </div>
+
+            <div v-if="!client && store.currentStep === 'JOINING_ROOM'">
+                <Loader class="h-32 w-32" />
+            </div>
+
+            <div
+                class="flex gap-2 items-center w-full absolute left-4 bottom-4"
+                v-if="
+                    client && showUI && client.stream && client.videoActivated
+                "
+            >
+                <Tag class="!px-2 !py-2">
+                    <MicIcon
+                        v-if="client.audioActivated"
+                        class="text-white h-6"
+                    />
+                    <MutedMicIcon
+                        v-if="!client.audioActivated"
+                        class="text-danger h-6"
+                    />
+                </Tag>
+                <Tag class="text-2xl">{{ client.clientName }}</Tag>
             </div>
         </div>
     </div>
 </template>
 <script setup lang="ts">
+import OfflineIcon from '../components/OfflineIcon.vue';
+import Loader from '../components/Loader.vue';
+import Tag from '../components/Tag.vue';
+import MutedMicIcon from '../components/MutedMicIcon.vue';
+import MicIcon from '../components/MicIcon.vue';
+
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStore } from '../lib/store';
+import { useRoute } from 'vue-router';
+
+const qs = new URLSearchParams(window.location.search);
+const showUI = ref(!!qs.get('showUI'));
+const route = useRoute();
 
 const classes = computed(() => {
     return {
@@ -49,42 +90,35 @@ const classes = computed(() => {
 const store = useStore();
 
 const client = computed(() => {
-    const one = store.room.clients[store.user.idToFilter!];
+    const filteredClient = store.room.clients[store.user.idToFilter!];
 
-    return {
-        ...one,
-        stream: store.peers[store.user.idToFilter!]?.stream,
-    };
+    return filteredClient
+        ? {
+              ...filteredClient,
+              stream: store.peers[store.user.idToFilter!]?.stream,
+          }
+        : null;
 });
 
 const videoRef = ref<HTMLVideoElement | null>(null);
 
 watchEffect(async () => {
-    if (videoRef.value && client.value.stream) {
+    // Automatically play the video when the source the audio or video is loaded.
+    if (client.value && videoRef.value && client.value.stream) {
         videoRef.value.srcObject = client.value.stream;
         videoRef.value.play();
     }
 });
 
-// Automatically play the video when the source the audio or video is loaded.
-const hashFromID = computed(() => {
-    const embedRoomRegex = /\/embed\/([a-z0-9]{10})\/(.+)$/;
-    const hash = window.location.hash;
-    const [_, ...matches] = hash.match(embedRoomRegex)!;
-    return matches;
-});
-
 onMounted(async () => {
-    console.log({ hashFromID: hashFromID.value });
-    const [roomId, cliendId] = hashFromID.value;
-
     store.joinRoom({
-        id: roomId,
-        username: `embed-${hashFromID.value}`,
+        id: route.params.roomId as string,
+        username: `embed-${route.params.roomId}`,
         embed: true,
-        filter: cliendId,
+        filter: route.params.filterId as string,
     });
 });
+
 onUnmounted(() => {
     store.leaveRoom();
 });

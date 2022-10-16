@@ -2,7 +2,7 @@
 <p align="center">
   <a href="https://kisscam.fredkiss.dev">
     <img alt="Design" src="./design/KISSCAM-V-2.png" width="100%" />
-  </a>
+  </router-link>
 </p>
 
 # KISSCAM ❤️📸 

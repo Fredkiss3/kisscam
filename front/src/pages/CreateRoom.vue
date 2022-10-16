@@ -31,21 +31,23 @@
             </Button>
         </form>
 
-        <a href="#/" class="flex gap-2 items-center underline">
+        <router-link to="/" class="flex gap-2 items-center underline">
             <ArrowLeftIcon class="h-4" />
             Go back
-        </a>
+        </router-link>
     </div>
 </template>
 
 <script setup lang="ts">
 import Input from '../components/Input.vue';
 import Button from '../components/Button.vue';
-
 import { ArrowLeftIcon } from '@heroicons/vue/outline';
+
 import { reactive, watch } from 'vue';
 import { useStore } from '../lib/store';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const store = useStore();
 
 // change the roomId when the user joins a room
@@ -53,13 +55,18 @@ watch(
     () => ({ currentStep: store.currentStep, roomId: store.room.id }),
     ({ currentStep, roomId }) => {
         if (roomId && currentStep === 'ROOM_CREATED') {
-            window.location.hash = `/room/${roomId}`;
+            router.push({
+                name: 'call-room',
+                params: {
+                    roomId: roomId,
+                },
+            });
         }
     }
 );
 
 const data = reactive({
     username: store.user.name,
-    roomName: ''
+    roomName: '',
 });
 </script>
