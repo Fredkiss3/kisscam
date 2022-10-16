@@ -11,8 +11,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-
 // @ts-ignore
-const isPROD = ref(import.meta.env.MODE !== 'development');
+const isPROD = import.meta.env.MODE !== 'development';
 </script>
