@@ -11,6 +11,6 @@
 </template>
 
 <script setup lang="ts">
-// @ts-ignore
+// @ts-nocheck
 const isPROD = import.meta.env.MODE !== 'development';
 </script>
