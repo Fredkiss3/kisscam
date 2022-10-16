@@ -29,8 +29,8 @@
                 />
 
                 <VideoCard
-                    v-for="(client, clientId, index) in store.room.clients"
-                    :key="clientId"
+                    v-for="(client, index) in clients"
+                    :key="client.id"
                     :class="`${
                         Object.keys(store.room.clients).length % 2 === 0 &&
                         index === Object.keys(store.room.clients).length - 1
@@ -39,15 +39,15 @@
                     }`"
                     :fixedWidth="false"
                     :name="client.clientName"
-                    :client-id="clientId"
+                    :client-id="client.id"
                     :peeps-no="client.peepNo"
                     :is-host="client.isHost"
-                    :video-src="store.peers[clientId]?.stream ?? null"
-                    :muted="!store.room.clients[clientId].audioActivated"
+                    :video-src="store.peers[client.id]?.stream ?? null"
+                    :muted="!store.room.clients[client.id].audioActivated"
                     :video-activated="
-                        store.room.clients[clientId].videoActivated
+                        store.room.clients[client.id].videoActivated
                     "
-                    @copy-embed="copyEmbedLinkToClipboard(clientId)"
+                    @copy-embed="copyEmbedLinkToClipboard(client.id)"
                 />
             </div>
         </div>
@@ -90,6 +90,17 @@ const hashFromID = computed(() => {
     const podRegex = /\/pod\/([a-z0-9]{10})$/;
     const hash = window.location.hash;
     return hash.match(podRegex)![1];
+});
+
+const clients = computed(() => {
+    return Object.entries(store.room.clients)
+        .filter(([_, client]) => {
+            return !client.isEmbed;
+        })
+        .map(([id, client]) => ({
+            id,
+            ...client,
+        }));
 });
 
 onMounted(async () => {
@@ -135,8 +146,6 @@ onUnmounted(() => {
 
 async function copyEmbedLinkToClipboard(id: string) {
     const embedLink = `${window.location.origin}/#/embed/${hashFromID.value}/${id}`;
-    console.log({ embedLink });
-
     await navigator.clipboard.writeText(embedLink);
     alert('The embed link has been copied to your clipboard');
 }

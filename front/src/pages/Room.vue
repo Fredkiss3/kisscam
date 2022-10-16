@@ -56,12 +56,6 @@ import ControlsPanel from '../components/ControlsPanel.vue';
 
 const store = useStore();
 
-watchEffect(() => {
-    console.log({
-        clients: store.room.clients,
-    });
-});
-
 const clients = computed(() => {
     return Object.entries(store.room.clients)
         .filter(([_, client]) => {
@@ -119,8 +113,6 @@ onMounted(async () => {
 
 async function copyEmbedLinkToClipboard(id: string) {
     const embedLink = `${window.location.origin}/#/embed/${hashFromID.value}/${id}`;
-    console.log({ embedLink });
-
     await navigator.clipboard.writeText(embedLink);
     alert('The embed link has been copied to your clipboard');
 }
