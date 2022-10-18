@@ -13,7 +13,10 @@
     "license": "ISC",
     "dependencies": {
         "@fastify/cors": "^7.0.0",
+        "@fastify/type-provider-typebox": "^2.3.0",
         "@kisscam/shared": "workspace:^1.0.0",
+        "@sinclair/typebox": "^0.24.47",
+        "@supabase/supabase-js": "^2.0.1",
         "dotenv": "^16.0.1",
         "fastify": "^3.29.0",
         "fastify-socket.io": "^3.0.0",

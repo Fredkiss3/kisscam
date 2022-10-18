@@ -19,6 +19,8 @@ import {
 } from '@kisscam/shared';
 import { initClient } from './lib/redis';
 import handlers from './handlers';
+import { createUserIfNotExists } from './routes';
+import { Type } from '@sinclair/typebox';
 
 const server = Fastify({});
 
@@ -78,6 +80,27 @@ const start = async () => {
         }
     );
 };
+
+/* =================================================== */
+/* ====================== ROUTES ===================== */
+/* =================================================== */
+server.get('/ping', async (req, res) => {
+    return { ping: 'pong' };
+});
+
+server.post(
+    `/create-user-if-not-exists`,
+    {
+        schema: {
+            body: Type.Object({
+                uid: Type.String({
+                    format: 'uuid',
+                }),
+            }),
+        },
+    },
+    createUserIfNotExists
+);
 
 initClient()
     .then(() => {

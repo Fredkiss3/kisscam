@@ -2,12 +2,9 @@ export function randomInt(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function gotoHashURL(hash: string, qsParams?: Record<string, string>) {
-    const url = new URL(window.location.href);
-    url.hash = hash;
-    url.search = new URLSearchParams(qsParams).toString();
-    window.location.href = url.toString();
-    return;
+export function getHostWithScheme(url: string): string {
+    const urlObject = new URL(url);
+    return urlObject.protocol + '//' + urlObject.host;
 }
 
 export function wait(ms: number): Promise<void> {
@@ -21,12 +18,38 @@ export function createPeerConnection() {
             {
                 urls: [
                     'stun:stun1.l.google.com:19302',
-                    'stun:stun2.l.google.com:19302'
-                ]
-            }
+                    'stun:stun2.l.google.com:19302',
+                ],
+            },
         ],
-        iceCandidatePoolSize: 50
+        iceCandidatePoolSize: 50,
     });
 
     return pc;
+}
+
+export async function jsonFetch<T>(
+    url: string,
+    options: RequestInit = {}
+): Promise<T> {
+    // Set the default headers correctly
+    const headers: HeadersInit = new Headers(options.headers);
+    headers.set('Accept', 'application/json');
+    headers.set('Content-Type', 'application/json');
+
+    // @ts-ignore
+    if (import.meta.env.MODE !== 'development') {
+        await wait(1500);
+    }
+
+    return fetch(url, {
+        ...options,
+        headers,
+        mode: 'cors',
+    })
+        .then((response) => response.json())
+        .catch((error) => {
+            console.error('There was an error ?', error);
+            throw error;
+        });
 }

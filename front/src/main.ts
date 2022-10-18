@@ -10,6 +10,10 @@ import PodCastRoom from './pages/PodCastRoom.vue';
 import JoinPodRoom from './pages/JoinPodRoom.vue';
 import NotFound from './pages/NotFound.vue';
 import Embed from './pages/Embed.vue';
+import Login from './pages/Login.vue';
+import AuthLayout from './pages/auth/Layout.vue';
+import Callback from './pages/auth/CallbackPage.vue';
+import Profile from './pages/auth/Profile.vue';
 
 import {
     createRouter,
@@ -17,8 +21,25 @@ import {
     type RouteRecordRaw,
 } from 'vue-router';
 
-const routes: readonly RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = [
     { path: '/', name: 'home', component: Home },
+    { path: '/login', name: 'login', component: Login },
+    {
+        path: '/auth',
+        component: AuthLayout,
+        children: [
+            {
+                path: 'callback',
+                name: 'callback',
+                component: Callback,
+            },
+            {
+                path: 'profile',
+                name: 'profile',
+                component: Profile,
+            },
+        ],
+    },
     { path: '/create-room', name: 'create-room', component: CreateRoom },
     {
         path: '/room/:roomId([a-z0-9]{10})',
@@ -50,7 +71,7 @@ const routes: readonly RouteRecordRaw[] = [
             message: '404 | Page Not Found',
         },
     },
-] as const;
+];
 
 const router = createRouter({
     history: createWebHistory(),
