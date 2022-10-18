@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import './assets/app.css';
-import Home from './pages/Home.vue';
+import Home from './pages/Profile.vue';
 import Room from './pages/Room.vue';
 import JoinRoom from './pages/JoinRoom.vue';
 import CreateRoom from './pages/CreateRoom.vue';
@@ -11,9 +11,9 @@ import JoinPodRoom from './pages/JoinPodRoom.vue';
 import NotFound from './pages/NotFound.vue';
 import Embed from './pages/Embed.vue';
 import Login from './pages/Login.vue';
-import AuthLayout from './pages/auth/Layout.vue';
 import Callback from './pages/auth/CallbackPage.vue';
-import Profile from './pages/auth/Profile.vue';
+import AuthLayout from './pages/auth/Layout.vue';
+import BaseLayout from './pages/Layout.vue';
 
 import {
     createRouter,
@@ -22,7 +22,18 @@ import {
 } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
-    { path: '/', name: 'home', component: Home },
+    {
+        path: '/',
+        name: 'home',
+        component: BaseLayout,
+        children: [
+            {
+                path: '',
+                name: 'profile',
+                component: Home,
+            },
+        ],
+    },
     { path: '/login', name: 'login', component: Login },
     {
         path: '/auth',
@@ -32,11 +43,6 @@ const routes: RouteRecordRaw[] = [
                 path: 'callback',
                 name: 'callback',
                 component: Callback,
-            },
-            {
-                path: 'profile',
-                name: 'profile',
-                component: Profile,
             },
         ],
     },

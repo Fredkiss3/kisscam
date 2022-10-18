@@ -9,7 +9,7 @@ import { computed } from 'vue';
 
 interface Props {
     class?: string;
-    variant?: 'primary' | 'danger' | 'hollow';
+    variant?: 'primary' | 'danger' | 'hollow' | 'purple';
     title?: string;
     href: string;
 }
@@ -24,6 +24,7 @@ const classes = computed(() => {
         'bg-primary': props.variant === 'primary',
         'bg-danger': props.variant === 'danger',
         'bg-hollow': props.variant === 'hollow',
+        'bg-purple-500': props.variant === 'purple',
         'py-2 px-4 rounded-md font-bold text-white flex gap-2 items-center':
             true,
         [props.class]: true,
