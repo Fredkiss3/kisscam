@@ -81,7 +81,7 @@ import ChatTitlePanel from '../components/ChatTitlePanel.vue';
 
 // utils & functions
 import { computed, onMounted, onUnmounted } from 'vue';
-import { randomInt, gotoHashURL } from '../lib/functions';
+import { randomInt } from '../lib/functions';
 import { useStore } from '../lib/store';
 import { useRoute, useRouter } from 'vue-router';
 
