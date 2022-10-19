@@ -37,12 +37,15 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: FORCE_COLOR=true pnpm i --prefix front
+        run: FORCE_COLOR=true pnpm install --frozen-lockfile  --prefix front
 
       - name: Build the frontend
         run: |
           FORCE_COLOR=true pnpm run --prefix shared build
-          NODE_ENV=production VITE_WS_URL=kisscam.fredkiss.dev FORCE_COLOR=true pnpm run --prefix front build
+          NODE_ENV=production VITE_WS_URL=kiss-cam.live VITE_SUPABASE_URL=$SUPABASE_URL VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY FORCE_COLOR=true pnpm run --prefix front build
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Cache Build Output
         uses: actions/upload-artifact@v2

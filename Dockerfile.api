@@ -1,7 +1,14 @@
 FROM node:16-alpine
 
+# ENV ARGS
+ARG SUPABASE_URL
+ARG SUPABASE_SERVICE_ROLE_KEY
+
 # With default values
 ENV PORT=80
+
+ENV SUPABASE_URL=$SUPABASE_URL
+ENV SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 
 # should be specified
 WORKDIR /webapp
@@ -17,10 +24,10 @@ COPY ./shared ./shared
 COPY ./back ./back
 
 
-RUN pnpm install --prefix shared  --shamefully-hoist \
+RUN pnpm install --frozen-lockfile --prefix shared  --shamefully-hoist \
     && pnpm --prefix shared run build 
 
-RUN pnpm install --prefix back  --shamefully-hoist \
+RUN pnpm install --frozen-lockfile --prefix back  --shamefully-hoist \
     && pnpm --prefix back run build 
 
 ENV NODE_ENV=production
