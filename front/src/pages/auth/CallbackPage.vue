@@ -32,7 +32,9 @@ onMounted(() => {
             });
         } else {
             jsonFetch<{ error: null | string }>(
-                `//${import.meta.env.VITE_WS_URL}/create-user-if-not-exists`,
+                `//${
+                    import.meta.env.VITE_WS_URL
+                }/api/create-user-if-not-exists`,
                 {
                     method: 'POST',
                     body: JSON.stringify({

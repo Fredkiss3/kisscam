@@ -84,12 +84,12 @@ const start = async () => {
 /* =================================================== */
 /* ====================== ROUTES ===================== */
 /* =================================================== */
-server.get('/ping', async (req, res) => {
+server.get('/api/ping', async (req, res) => {
     return { ping: 'pong' };
 });
 
 server.post(
-    `/create-user-if-not-exists`,
+    `/api/create-user-if-not-exists`,
     {
         schema: {
             body: Type.Object({
