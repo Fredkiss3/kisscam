@@ -9,7 +9,7 @@
     "scripts": {
         "start-supabase": "docker-compose  -f ./supabase/docker-compose.yml  -f ./supabase/dev/docker-compose.dev.yml up -d --remove-orphans",
         "start-redis": "docker-compose  -f ./back/docker-compose.yaml up -d --remove-orphans",
-        "dev": "pnpm start-redis && pnpm start-supabase && pnpm run --parallel dev"
+        "dev": "pnpm start-redis && pnpm run --parallel dev"
     },
     "packageManager": "pnpm@7.1.0",
     "devDependencies": {
