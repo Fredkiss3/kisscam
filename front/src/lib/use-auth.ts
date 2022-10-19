@@ -15,10 +15,11 @@ async function getSession() {
     return data;
 }
 
+let session = ref<Session | null>(null);
+const isLoading = ref(true);
+
 export function useAuthedSession() {
     const router = useRouter();
-    const isLoading = ref(true);
-    let session = ref<Session | null>(null);
     onMounted(() => {
         getSession()
             .then((data) => {
