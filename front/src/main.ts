@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import './assets/app.css';
-import Home from './pages/Profile.vue';
+import Home from './pages/Dashboard.vue';
 import Room from './pages/Room.vue';
 import JoinRoom from './pages/JoinRoom.vue';
 import CreateRoom from './pages/CreateRoom.vue';
@@ -14,6 +14,9 @@ import Login from './pages/Login.vue';
 import Callback from './pages/auth/CallbackPage.vue';
 import AuthLayout from './pages/auth/Layout.vue';
 import BaseLayout from './pages/Layout.vue';
+import Success from './pages/payment/Success.vue';
+import Cancelled from './pages/payment/Cancelled.vue';
+import Gateway from './pages/Gateway.vue';
 
 import {
     createRouter,
@@ -31,6 +34,26 @@ const routes: RouteRecordRaw[] = [
                 path: '',
                 name: 'profile',
                 component: Home,
+            },
+            {
+                path: 'gateway',
+                name: 'payment-gateway',
+                component: Gateway,
+            },
+            {
+                path: 'payment',
+                children: [
+                    {
+                        path: 'success',
+                        name: 'payment-success',
+                        component: Success,
+                    },
+                    {
+                        path: 'cancelled',
+                        name: 'payment-cancelled',
+                        component: Cancelled,
+                    },
+                ],
             },
         ],
     },

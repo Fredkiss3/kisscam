@@ -1,12 +1,25 @@
 import { supabase } from './supabase-client';
-import { onMounted, ref } from 'vue';
-import type { Session } from '@supabase/supabase-js';
+import { onMounted, onUnmounted, ref } from 'vue';
+import type {
+    RealtimeChannel,
+    User as SupabaseUser,
+} from '@supabase/supabase-js';
 import { useRouter } from 'vue-router';
-import { wait } from './functions';
+
+export type User = SupabaseUser & {
+    created_at: string;
+    id: string;
+    stripe_customer_id: string;
+    subscription_end_at: string | null;
+    subscribed_at: string | null;
+};
+
+let user = ref<User | null>(null);
+const isLoading = ref(true);
+const supabaseSubscription = ref<RealtimeChannel | null>(null);
 
 async function getSession() {
-    await wait(2000);
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getUser();
 
     if (error) {
         console.error('Supabase error : ' + error);
@@ -15,21 +28,48 @@ async function getSession() {
     return data;
 }
 
-let session = ref<Session | null>(null);
-const isLoading = ref(true);
-
-export function useAuthedSession() {
+export function useAuthedUser() {
     const router = useRouter();
     onMounted(() => {
         getSession()
-            .then((data) => {
-                if (!data.session) {
+            .then(async (data) => {
+                if (!data.user) {
                     router.replace({
                         name: 'login',
                     });
                     return;
                 } else {
-                    session.value = data.session;
+                    // get profile data
+                    const { data: profile } = await supabase
+                        .from('profile')
+                        .select()
+                        .eq('id', data.user.id);
+
+                    if (profile.length === 0) {
+                        router.replace({
+                            name: 'login',
+                        });
+                        return;
+                    }
+
+                    user.value = { ...data.user, ...profile[0] };
+                    // subscribe to subscription status
+                    supabaseSubscription.value = supabase
+                        .channel(`public:profile:id=eq.${data.user.id}`)
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: 'UPDATE',
+                                schema: 'public',
+                                table: 'profile',
+                                filter: `id=eq.${data.user.id}`,
+                            },
+                            (payload) => {
+                                // @ts-expect-error
+                                user.value = { ...user.value, ...payload.new };
+                            }
+                        )
+                        .subscribe();
                 }
             })
             .finally(() => {
@@ -39,14 +79,20 @@ export function useAuthedSession() {
 
     const logout = async () => {
         await supabase.auth.signOut();
-        session.value = null;
+        user.value = null;
         router.replace({
             name: 'login',
         });
     };
 
+    onUnmounted(() => {
+        if (supabaseSubscription.value !== null) {
+            supabaseSubscription.value.unsubscribe();
+        }
+    });
+
     return {
-        session: session,
+        user,
         isLoading,
         logout,
     };

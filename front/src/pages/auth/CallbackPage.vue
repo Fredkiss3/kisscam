@@ -39,6 +39,7 @@ onMounted(() => {
                     method: 'POST',
                     body: JSON.stringify({
                         uid: user.id,
+                        email: user.email,
                     }),
                 }
             ).then((res) => {

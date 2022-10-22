@@ -19,7 +19,12 @@ import {
 } from '@kisscam/shared';
 import { initClient } from './lib/redis';
 import handlers from './handlers';
-import { createUserIfNotExists } from './routes';
+import {
+    createBillingPortalSession,
+    createCheckoutSession,
+    createUserIfNotExists,
+    stripeWebHookHandler,
+} from './routes';
 import { Type } from '@sinclair/typebox';
 
 const server = Fastify({});
@@ -28,7 +33,7 @@ const server = Fastify({});
 server.register(cors, () => {
     return (req: FastifyRequest, callback: Function) => {
         callback(null, {
-            origin: req.headers.origin as string,
+            origin: req.headers.origin ?? '*',
         });
     };
 });
@@ -96,11 +101,64 @@ server.post(
                 uid: Type.String({
                     format: 'uuid',
                 }),
+                email: Type.String({
+                    format: 'email',
+                }),
             }),
         },
     },
     createUserIfNotExists
 );
+
+server.post(
+    `/api/create-checkout-session`,
+    {
+        schema: {
+            body: Type.Object({
+                uid: Type.String({
+                    format: 'uuid',
+                }),
+            }),
+        },
+    },
+    createCheckoutSession
+);
+
+server.post(
+    `/api/create-portal-session`,
+    {
+        schema: {
+            body: Type.Object({
+                uid: Type.String({
+                    format: 'uuid',
+                }),
+            }),
+        },
+    },
+    createBillingPortalSession
+);
+
+server.register((fastify, opts, next) => {
+    fastify.addContentTypeParser(
+        'application/json',
+        { parseAs: 'buffer' },
+        function (req, body, done) {
+            try {
+                var newBody = {
+                    raw: body,
+                };
+                done(null, newBody);
+            } catch (error: any) {
+                error.statusCode = 400;
+                done(error, undefined);
+            }
+        }
+    );
+
+    fastify.post(`/api/stripe-webhook-handler`, stripeWebHookHandler);
+
+    next();
+});
 
 initClient()
     .then(() => {

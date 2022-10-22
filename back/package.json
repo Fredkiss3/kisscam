@@ -21,7 +21,8 @@
         "fastify": "^4.9.2",
         "fastify-socket.io": "^4.0.0",
         "redis-om": "^0.3.4",
-        "socket.io": "^4.5.3"
+        "socket.io": "^4.5.3",
+        "stripe": "^10.14.0"
     },
     "devDependencies": {
         "@types/node": "^17.0.33",
