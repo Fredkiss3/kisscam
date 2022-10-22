@@ -71,7 +71,6 @@ export async function stripeWebHookHandler(
 ) {
     const sig = req.headers['stripe-signature'];
     let event: Stripe.Event;
-    console.log('Received webhook event');
 
     try {
         event = stripe.webhooks.constructEvent(
@@ -80,8 +79,6 @@ export async function stripeWebHookHandler(
             process.env.STRIPE_WEBHOOK_SECRET as string
         );
     } catch (err) {
-        console.log(`Webhook Error: ${(err as Error).message}`);
-
         return res.status(400).send({
             success: false,
             error: `Webhook Error: ${(err as Error).message}`,
@@ -96,7 +93,7 @@ export async function stripeWebHookHandler(
             );
             const end = new Date((event.data.object as any).period_end * 1000);
 
-            const { data: profile, error } = await supabase
+            const { error } = await supabase
                 .from('profile')
                 .update({
                     subscribed_at: start.toISOString(),
@@ -104,17 +101,18 @@ export async function stripeWebHookHandler(
                 })
                 .eq('stripe_customer_id', (event.data.object as any).customer)
                 .select();
-            console.log({
-                invoice_data: {
-                    profile,
-                    error,
-                },
-            });
+
+            if (error) {
+                return res.status(400).send({
+                    success: false,
+                    error: `Webhook Error: ${error.toString()}`,
+                });
+            }
             break;
         }
         case 'customer.subscription.deleted': {
             // end subscription
-            const { data: profile } = await supabase
+            const { error } = await supabase
                 .from('profile')
                 .update({
                     subscribed_at: null,
@@ -122,15 +120,16 @@ export async function stripeWebHookHandler(
                 })
                 .eq('stripe_customer_id', (event.data.object as any).customer)
                 .select();
+
+            if (error) {
+                return res.status(400).send({
+                    success: false,
+                    error: `Webhook Error: ${error.toString()}`,
+                });
+            }
             return;
         }
     }
-
-    console.log({
-        received: {
-            type: event.type,
-        },
-    });
 
     return res.status(200).send({
         success: true,
