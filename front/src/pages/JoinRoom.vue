@@ -27,7 +27,7 @@
             </Button>
         </form>
 
-        <router-link to="/" class="flex gap-2 items-center underline">
+        <router-link to="/dashboard" class="flex gap-2 items-center underline">
             <ArrowLeftIcon class="h-4" />
             Go back
         </router-link>
@@ -41,7 +41,7 @@ import { ArrowLeftIcon } from '@heroicons/vue/outline';
 
 import { useStore } from '../lib/store';
 import { reactive, ref, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const store = useStore();

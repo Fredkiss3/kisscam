@@ -8,9 +8,11 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@headlessui/vue": "^1.7.3",
         "@heroicons/vue": "^1.0.6",
         "@stripe/stripe-js": "^1.42.0",
         "@supabase/supabase-js": "^2.0.1",
+        "@tanstack/vue-query": "^4.13.1",
         "socket.io-client": "^4.5.1",
         "vue": "^3.2.25",
         "vue-router": "4"

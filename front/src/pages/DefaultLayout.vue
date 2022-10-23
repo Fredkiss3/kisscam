@@ -1,7 +1,9 @@
 <template>
-    <div class="h-screen flex flex-col items-center justify-center gap-4">
+    <Header />
+
+    <main class="h-[80vh] flex flex-col items-center justify-center gap-4 p-8">
         <router-view></router-view>
-    </div>
+    </main>
 
     <footer
         class="fixed bottom-0 left-0 right-0 p-2 bg-dark flex items-center justify-center"
@@ -18,3 +20,6 @@
         </div>
     </footer>
 </template>
+<script setup lang="ts">
+import Header from '../components/Header.vue';
+</script>

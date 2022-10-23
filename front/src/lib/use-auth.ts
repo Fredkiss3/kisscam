@@ -5,6 +5,8 @@ import type {
     User as SupabaseUser,
 } from '@supabase/supabase-js';
 import { useRouter } from 'vue-router';
+import { useQuery, useMutation } from '@tanstack/vue-query';
+import { wait } from './functions';
 
 export type User = SupabaseUser & {
     created_at: string;
@@ -15,85 +17,45 @@ export type User = SupabaseUser & {
 };
 
 let user = ref<User | null>(null);
-const isLoading = ref(true);
-const supabaseSubscription = ref<RealtimeChannel | null>(null);
 
 async function getSession() {
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getSession();
 
     if (error) {
         console.error('Supabase error : ' + error);
     }
 
-    return data;
+    return data?.session?.user;
 }
 
-export function useAuthedUser() {
+export function useLogoutMutation() {
     const router = useRouter();
-    onMounted(() => {
-        getSession()
-            .then(async (data) => {
-                if (!data.user) {
-                    router.replace({
-                        name: 'login',
-                    });
-                    return;
-                } else {
-                    // get profile data
-                    const { data: profile } = await supabase
-                        .from('profile')
-                        .select()
-                        .eq('id', data.user.id);
 
-                    if (profile.length === 0) {
-                        router.replace({
-                            name: 'login',
-                        });
-                        return;
-                    }
-
-                    user.value = { ...data.user, ...profile[0] };
-                    // subscribe to subscription status
-                    supabaseSubscription.value = supabase
-                        .channel(`public:profile:id=eq.${data.user.id}`)
-                        .on(
-                            'postgres_changes',
-                            {
-                                event: 'UPDATE',
-                                schema: 'public',
-                                table: 'profile',
-                                filter: `id=eq.${data.user.id}`,
-                            },
-                            (payload) => {
-                                // @ts-expect-error
-                                user.value = { ...user.value, ...payload.new };
-                            }
-                        )
-                        .subscribe();
-                }
-            })
-            .finally(() => {
-                isLoading.value = false;
-            });
-    });
-
-    const logout = async () => {
+    return useMutation(async () => {
         await supabase.auth.signOut();
         user.value = null;
         router.replace({
             name: 'login',
         });
-    };
-
-    onUnmounted(() => {
-        if (supabaseSubscription.value !== null) {
-            supabaseSubscription.value.unsubscribe();
-        }
     });
+}
 
-    return {
-        user,
-        isLoading,
-        logout,
-    };
+export function useUserQuery() {
+    return useQuery<User | null>(['session'], async () => {
+        await wait(1500);
+        const user = await getSession();
+
+        if (user) {
+            // get profile data
+            const { data: profile } = await supabase
+                .from('profile')
+                .select()
+                .eq('id', user.id);
+            if (profile.length > 0) {
+                return { ...user, ...profile[0] };
+            }
+        }
+
+        return null;
+    });
 }

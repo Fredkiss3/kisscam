@@ -11,6 +11,14 @@ module.exports = {
                 darker: '#0d0a16',
                 dark: '#100a1f',
             },
+            keyframes: {
+                'ping-sm': {
+                    '75%, 100%': { transform: ' scale(1.05)', opacity: 0 },
+                },
+            },
+            animation: {
+                'ping-sm': 'ping-sm 1.5s ease-in-out infinite',
+            },
         },
     },
     plugins: [],

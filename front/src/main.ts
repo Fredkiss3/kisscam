@@ -1,4 +1,6 @@
 import { createApp } from 'vue';
+import { VueQueryPlugin } from '@tanstack/vue-query';
+
 import App from './App.vue';
 import './assets/app.css';
 import Home from './pages/Dashboard.vue';
@@ -13,7 +15,8 @@ import Embed from './pages/Embed.vue';
 import Login from './pages/Login.vue';
 import Callback from './pages/auth/CallbackPage.vue';
 import AuthLayout from './pages/auth/Layout.vue';
-import BaseLayout from './pages/Layout.vue';
+import ProtectedLayout from './pages/ProtectedLayout.vue';
+import DefaultLayout from './pages/DefaultLayout.vue';
 import Success from './pages/payment/Success.vue';
 import Cancelled from './pages/payment/Cancelled.vue';
 import Gateway from './pages/Gateway.vue';
@@ -28,11 +31,11 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/',
         name: 'home',
-        component: BaseLayout,
+        component: ProtectedLayout,
         children: [
             {
-                path: '',
-                name: 'profile',
+                path: 'dashboard',
+                name: 'dashboard',
                 component: Home,
             },
             {
@@ -55,6 +58,25 @@ const routes: RouteRecordRaw[] = [
                     },
                 ],
             },
+            { path: 'create-room', name: 'create-room', component: CreateRoom },
+            {
+                path: 'create-podcast-room',
+                name: 'create-podcast-room',
+                component: CreatePodCastRoom,
+            },
+        ],
+    },
+    {
+        path: '/join',
+        name: 'home',
+        component: DefaultLayout,
+        children: [
+            { path: 'room', name: 'join-call-room', component: JoinRoom },
+            {
+                path: 'pod-room',
+                name: 'join-pod-room',
+                component: JoinPodRoom,
+            },
         ],
     },
     { path: '/login', name: 'login', component: Login },
@@ -69,7 +91,7 @@ const routes: RouteRecordRaw[] = [
             },
         ],
     },
-    { path: '/create-room', name: 'create-room', component: CreateRoom },
+
     {
         path: '/room/:roomId([a-z0-9]{10})',
         name: 'call-room',
@@ -85,13 +107,6 @@ const routes: RouteRecordRaw[] = [
         name: 'podcast-room',
         component: PodCastRoom,
     },
-    {
-        path: '/create-podcast-room',
-        name: 'create-podcast-room',
-        component: CreatePodCastRoom,
-    },
-    { path: '/join-room', name: 'join-call-room', component: JoinRoom },
-    { path: '/join-pod-room', name: 'join-pod-room', component: JoinPodRoom },
     {
         path: '/:pathMatch(.*)',
         name: 'not-found',
@@ -109,5 +124,6 @@ const router = createRouter({
 
 const app = createApp(App);
 app.use(router);
+app.use(VueQueryPlugin);
 
 app.mount('#app');
