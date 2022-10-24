@@ -31,7 +31,7 @@
             </Button>
         </form>
 
-        <router-link to="/dashboard" class="flex gap-2 items-center underline">
+        <router-link to="/" class="flex gap-2 items-center underline">
             <ArrowLeftIcon class="h-4" />
             Go back
         </router-link>

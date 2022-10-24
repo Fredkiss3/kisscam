@@ -1,5 +1,8 @@
 <template>
-    <div class="flex flex-col items-center gap-4 md:flex-row">
+    <div
+        class="flex flex-col items-center gap-4 md:flex-row"
+        v-if="user?.subscribed_at !== null"
+    >
         <Card href="/create-room" is-cta>
             <template v-slot:header>
                 <span>Create a Room</span>
@@ -27,48 +30,31 @@
             <template v-slot:default> Join a friend </template>
         </Card>
     </div>
+    <div class="flex flex-col items-center gap-4" v-else>
+        <h1 class="text-3xl font-bold">Signup to access all features</h1>
+        <Button @click="checkout.mutate" :loading="checkout.isLoading.value">
+            Start your free trial now
+        </Button>
+        <p class="text-center">
+            Try KISS-CAM for free for 15 days. By signing up for KISS-CAM,
+            <br />
+            you agree to
+            <router-link to="/tos" class="underline">
+                our terms of service</router-link
+            >.
+        </p>
+    </div>
 </template>
 
 <script setup lang="ts">
+// components
 import Card from '../components/Card.vue';
+import Button from '../components/Button.vue';
 import { ArrowRightIcon, PlusIcon, MicrophoneIcon } from '@heroicons/vue/solid';
 
-import { loadStripe } from '@stripe/stripe-js';
-import { jsonFetch } from '../lib/functions';
-import { ref } from 'vue';
-import { useUserQuery } from '../lib/use-auth';
+// utils
+import { useUserQuery, useCheckoutSessionMutation } from '../lib/composables';
 
 const { data: user } = useUserQuery();
-
-const isLoadingStripeCheckout = ref<boolean>(false);
-
-async function createCheckoutSession() {
-    isLoadingStripeCheckout.value = true;
-
-    const stripe = await loadStripe(
-        // @ts-ignore
-        import.meta.env.VITE_STRIPE_PUBLIC_KEY
-    );
-
-    if (stripe && user.value) {
-        const res = await jsonFetch<
-            { id: string; error: undefined } | { error: string; id: undefined }
-        >(`//${import.meta.env.VITE_WS_URL}/api/create-checkout-session`, {
-            method: 'POST',
-            body: JSON.stringify({
-                uid: user.value.id,
-            }),
-        });
-
-        if (res.error !== undefined) {
-            console.log(res.error);
-        } else {
-            await stripe.redirectToCheckout({
-                sessionId: res.id,
-            });
-        }
-    }
-
-    isLoadingStripeCheckout.value = false;
-}
+const checkout = useCheckoutSessionMutation(user.value);
 </script>

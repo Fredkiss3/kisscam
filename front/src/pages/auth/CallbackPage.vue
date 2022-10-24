@@ -33,6 +33,7 @@ onMounted(() => {
         } else {
             jsonFetch<{ error: null | string }>(
                 `//${
+                    // @ts-ignore
                     import.meta.env.VITE_WS_URL
                 }/api/create-user-if-not-exists`,
                 {
@@ -47,7 +48,7 @@ onMounted(() => {
                     console.error(res.error);
                 } else {
                     router.replace({
-                        name: 'profile',
+                        name: 'dashboard',
                     });
                 }
             });

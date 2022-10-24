@@ -13,13 +13,13 @@
         class="fixed bottom-0 left-0 right-0 p-2 bg-dark flex items-center justify-center"
     >
         <div class="text-center">
-            Copyright &copy; {{ new Date().getFullYear() }} By
+            Copyright &copy; {{ new Date().getFullYear() }} by
 
             <a target="_blank" href="https://fredkiss.dev">
                 <span class="underline">Adrien KISSIE</span>
             </a>
 
-            &nbsp;Contact me at
+            &nbsp;contact me at
 
             <a class="font-bold underline" href="mailto:contact@kiss-cam.live">
                 contact@kiss-cam.live
@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import { onUnmounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
-import { useUserQuery } from '../lib/use-auth';
+import { useUserQuery } from '../lib/composables';
 
 import Header from '../components/Header.vue';
 import Loader from '../components/Loader.vue';
@@ -71,7 +71,7 @@ watchEffect(() => {
                     filter: `id=eq.${user.value.id}`,
                 },
                 (payload) => {
-                    // @ts-expect-error
+                    // @ts-ignore
                     user.value = { ...user.value, ...payload.new };
                 }
             )

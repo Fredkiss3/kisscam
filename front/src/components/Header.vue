@@ -1,9 +1,6 @@
 <template>
-    <header
-        class="flex p-4 justify-between items-center bg-hollow"
-        v-if="!isLoading"
-    >
-        <router-link to="/dashboard">
+    <header class="flex p-4 justify-between items-center bg-hollow">
+        <router-link to="/">
             <img src="/logo-dark-text.svg" alt="KISSCAM's Logo" class="h-10" />
         </router-link>
 
@@ -27,9 +24,12 @@
 
                 <template v-slot:items>
                     <div class="px-1 py-1">
-                        <MenuItem v-slot="{ active }">
+                        <MenuItem
+                            v-slot="{ active }"
+                            v-if="user?.subscribed_at !== null"
+                        >
                             <button
-                                @click="createPortalSession"
+                                @click="portalSession.mutate"
                                 :class="[
                                     active
                                         ? 'bg-purple-500 text-white'
@@ -70,29 +70,13 @@ import { ChevronDownIcon } from '@heroicons/vue/solid';
 import { MenuItem } from '@headlessui/vue';
 import Menu from './Menu.vue';
 
-import { jsonFetch } from '../lib/functions';
-import { useLogoutMutation, useUserQuery } from '../lib/use-auth';
+import {
+    useLogoutMutation,
+    useUserQuery,
+    usePortalSessionMutation,
+} from '../lib/composables';
 
-const { isLoading, data: user } = useUserQuery();
+const { data: user } = useUserQuery();
 const logout = useLogoutMutation();
-
-async function createPortalSession() {
-    if (user.value) {
-        const res = await jsonFetch<
-            | { url: string; error: undefined }
-            | { error: string; url: undefined }
-        >(`//${import.meta.env.VITE_WS_URL}/api/create-portal-session`, {
-            method: 'POST',
-            body: JSON.stringify({
-                uid: user.value.id,
-            }),
-        });
-
-        if (res.error !== undefined) {
-            console.log(res.error);
-        } else {
-            window.location.href = res.url;
-        }
-    }
-}
+const portalSession = usePortalSessionMutation();
 </script>

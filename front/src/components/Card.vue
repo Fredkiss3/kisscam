@@ -2,11 +2,20 @@
     <div :class="classes" :title="title">
         <router-link
             :to="href"
-            class="flex justify-between gap-4 items-center after:absolute after:inset-0 after:z-10"
+            :class="[
+                'flex justify-between gap-4 items-center',
+                'focus:outline-none',
+                'after:absolute after:inset-0 after:z-10 after:rounded-md',
+                'group-focus-within:after:ring-2',
+                'group-hover:after:ring-2 ',
+                props.isCta
+                    ? 'after:ring-primary'
+                    : 'after:ring-white after:ring-opacity-40',
+            ]"
         >
             <slot name="header" />
         </router-link>
-        <small class="text-gray-400">
+        <small :class="['text-gray-400']">
             <slot />
         </small>
     </div>
@@ -30,12 +39,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const classes = computed(() => {
     return {
-        'ring-primary': props.isCta,
-        'ring-white ring-opacity-40': !props.isCta,
         'rounded-md font-bold text-white p-4 h-40 w-60': true,
         'flex flex-col gap-4 items-start justify-between': true,
-        'bg-hollow relative': true,
-        'hover:ring-2': true,
+        'relative group': true,
+        'bg-hollow-light': props.isCta,
+        'bg-hollow': !props.isCta,
         [props.class]: true,
     };
 });

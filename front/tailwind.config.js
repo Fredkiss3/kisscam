@@ -6,7 +6,10 @@ module.exports = {
                 primary: '#00C966',
                 danger: '#ff005a',
                 secondary: '#928c9e',
-                hollow: '#261b3c',
+                hollow: {
+                    DEFAULT: '#261b3c',
+                    light: '#3c2a5f',
+                },
                 darkest: '#020016',
                 darker: '#0d0a16',
                 dark: '#100a1f',

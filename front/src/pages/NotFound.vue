@@ -2,7 +2,7 @@
     <div class="h-screen flex items-center justify-center flex-col gap-4">
         <h1>{{ props.message }}</h1>
 
-        <router-link to="/dashboard" class="flex gap-2 items-center underline">
+        <router-link to="/" class="flex gap-2 items-center underline">
             <ArrowLeftIcon class="h-4" />
             Go Home
         </router-link>

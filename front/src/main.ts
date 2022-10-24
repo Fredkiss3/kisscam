@@ -34,7 +34,7 @@ const routes: RouteRecordRaw[] = [
         component: ProtectedLayout,
         children: [
             {
-                path: 'dashboard',
+                path: '',
                 name: 'dashboard',
                 component: Home,
             },
@@ -68,7 +68,7 @@ const routes: RouteRecordRaw[] = [
     },
     {
         path: '/join',
-        name: 'home',
+        name: 'join',
         component: DefaultLayout,
         children: [
             { path: 'room', name: 'join-call-room', component: JoinRoom },
