@@ -29,7 +29,7 @@
                             v-if="user?.subscribed_at !== null"
                         >
                             <button
-                                @click="portalSession.mutate"
+                                @click="(e) => portalSession.mutate()"
                                 :class="[
                                     active
                                         ? 'bg-purple-500 text-white'
@@ -44,7 +44,7 @@
 
                         <MenuItem v-slot="{ active }">
                             <button
-                                @click="logout.mutate"
+                                @click="(e) => logout.mutate()"
                                 :class="[
                                     active
                                         ? 'bg-purple-500 text-white'
