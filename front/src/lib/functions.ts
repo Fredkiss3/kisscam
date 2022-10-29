@@ -28,10 +28,17 @@ export function createPeerConnection() {
     return pc;
 }
 
-export async function jsonFetch<T>(
+export type ApiResult<T> = { statusCode: number } & (
+    | (T & { error?: undefined | null })
+    | ({ [k in keyof T]: undefined } & {
+          error: string;
+      })
+);
+
+export async function jsonFetch<T extends {}>(
     url: string,
     options: RequestInit = {}
-): Promise<T> {
+): Promise<ApiResult<T>> {
     // Set the default headers correctly
     const headers: HeadersInit = new Headers(options.headers);
     headers.set('Accept', 'application/json');
@@ -47,7 +54,10 @@ export async function jsonFetch<T>(
         headers,
         mode: 'cors',
     })
-        .then((response) => response.json())
+        .then(async (response) => ({
+            ...(await response.json()),
+            statusCode: response.status,
+        }))
         .catch((error) => {
             console.error('There was an error ?', error);
             throw error;

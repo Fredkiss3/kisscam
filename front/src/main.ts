@@ -17,9 +17,9 @@ import Callback from './pages/auth/CallbackPage.vue';
 import AuthLayout from './pages/auth/Layout.vue';
 import ProtectedLayout from './pages/ProtectedLayout.vue';
 import DefaultLayout from './pages/DefaultLayout.vue';
+import PaymentGatedLayout from './pages/PaymentGatedLayout.vue';
 import Success from './pages/payment/Success.vue';
 import Cancelled from './pages/payment/Cancelled.vue';
-import Gateway from './pages/Gateway.vue';
 
 import {
     createRouter,
@@ -38,11 +38,7 @@ const routes: RouteRecordRaw[] = [
                 name: 'dashboard',
                 component: Home,
             },
-            {
-                path: 'gateway',
-                name: 'payment-gateway',
-                component: Gateway,
-            },
+
             {
                 path: 'payment',
                 children: [
@@ -58,11 +54,21 @@ const routes: RouteRecordRaw[] = [
                     },
                 ],
             },
-            { path: 'create-room', name: 'create-room', component: CreateRoom },
             {
-                path: 'create-podcast-room',
-                name: 'create-podcast-room',
-                component: CreatePodCastRoom,
+                path: 'create-room',
+                component: PaymentGatedLayout,
+                children: [
+                    {
+                        path: '',
+                        name: 'create-call-room',
+                        component: CreateRoom,
+                    },
+                    {
+                        path: 'podcast',
+                        name: 'create-podcast-room',
+                        component: CreatePodCastRoom,
+                    },
+                ],
             },
         ],
     },

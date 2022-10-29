@@ -1,8 +1,13 @@
 <template>
     <div class="h-screen flex flex-col items-center justify-center gap-4">
-        <div class="flex gap-2 items-center justify-center h-screen w-full">
+        <div
+            class="flex gap-2 items-center justify-center h-screen w-full relative"
+        >
+            <div
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-44 w-44 rounded-full bg-purple-500 blur-[200px] z-[-1]"
+            ></div>
             <Loader class="h-10 w-10" />
-            <h2 class="text-xl">Loading ...</h2>
+            <h1 class="text-2xl">Creating your account...</h1>
         </div>
     </div>
 </template>
@@ -13,46 +18,14 @@ import Loader from '../../components/Loader.vue';
 
 // utils
 import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { supabase } from '../../lib/supabase-client';
-import { jsonFetch } from '../../lib/functions';
+import { useCallbackMutation } from '../../lib/composables';
 
-const router = useRouter();
-
-async function checkUserSession() {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.user;
-}
+const callbackMutation = useCallbackMutation();
 
 onMounted(() => {
-    checkUserSession().then((user) => {
-        if (!user) {
-            router.replace({
-                name: 'login',
-            });
-        } else {
-            jsonFetch<{ error: null | string }>(
-                `//${
-                    // @ts-ignore
-                    import.meta.env.VITE_WS_URL
-                }/api/create-user-if-not-exists`,
-                {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        uid: user.id,
-                        email: user.email,
-                    }),
-                }
-            ).then((res) => {
-                if (res.error) {
-                    console.error(res.error);
-                } else {
-                    router.replace({
-                        name: 'dashboard',
-                    });
-                }
-            });
-        }
-    });
+    supabase.auth
+        .getSession()
+        .then(({ data }) => callbackMutation.mutateAsync(data.session));
 });
 </script>

@@ -5,27 +5,13 @@
         v-if="!isLoading"
         class="h-[80vh] flex flex-col items-center justify-center gap-4 p-8"
     >
+        <div
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-44 w-44 rounded-full bg-purple-500 blur-[200px] z-[-1]"
+        ></div>
         <router-view></router-view>
     </main>
 
-    <footer
-        v-if="!isLoading"
-        class="fixed bottom-0 left-0 right-0 p-2 bg-dark flex items-center justify-center"
-    >
-        <div class="text-center">
-            Copyright &copy; {{ new Date().getFullYear() }} by
-
-            <a target="_blank" href="https://fredkiss.dev">
-                <span class="underline">Adrien KISSIE</span>
-            </a>
-
-            &nbsp;contact me at
-
-            <a class="font-bold underline" href="mailto:contact@kiss-cam.live">
-                contact@kiss-cam.live
-            </a>
-        </div>
-    </footer>
+    <Footer v-if="!isLoading" />
 
     <div
         v-if="isLoading"
@@ -36,12 +22,13 @@
     </div>
 </template>
 <script setup lang="ts">
+import Footer from '../components/Footer.vue';
+import Header from '../components/Header.vue';
+import Loader from '../components/Loader.vue';
+
 import { onUnmounted, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserQuery } from '../lib/composables';
-
-import Header from '../components/Header.vue';
-import Loader from '../components/Loader.vue';
 import { supabase } from '../lib/supabase-client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -50,15 +37,7 @@ const router = useRouter();
 const supabaseSubscription = ref<RealtimeChannel | null>(null);
 
 watchEffect(() => {
-    if (!isLoading.value && !user.value) {
-        router.replace({
-            name: 'login',
-        });
-    }
-});
-
-watchEffect(() => {
-    if (!isLoading && user.value) {
+    if (!isLoading.value && user.value) {
         // subscribe to subscription status
         supabaseSubscription.value = supabase
             .channel(`public:profile:id=eq.${user.value.id}`)
@@ -76,6 +55,10 @@ watchEffect(() => {
                 }
             )
             .subscribe();
+    } else if (!isLoading.value && !user.value) {
+        router.replace({
+            name: 'login',
+        });
     }
 });
 

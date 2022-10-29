@@ -29,7 +29,7 @@
                             v-if="user?.subscribed_at !== null"
                         >
                             <button
-                                @click="(e) => portalSession.mutate()"
+                                @click="creatPortalSession"
                                 :class="[
                                     active
                                         ? 'bg-purple-500 text-white'
@@ -44,7 +44,7 @@
 
                         <MenuItem v-slot="{ active }">
                             <button
-                                @click="(e) => logout.mutate()"
+                                @click="logout"
                                 :class="[
                                     active
                                         ? 'bg-purple-500 text-white'
@@ -77,6 +77,15 @@ import {
 } from '../lib/composables';
 
 const { data: user } = useUserQuery();
-const logout = useLogoutMutation();
-const portalSession = usePortalSessionMutation();
+const logoutMutation = useLogoutMutation();
+const portalSessionMutation = usePortalSessionMutation();
+async function logout() {
+    await logoutMutation.mutateAsync();
+}
+
+async function creatPortalSession() {
+    console.log('Portal session');
+
+    await portalSessionMutation.mutateAsync();
+}
 </script>

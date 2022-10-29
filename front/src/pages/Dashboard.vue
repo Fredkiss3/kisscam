@@ -12,7 +12,7 @@
             <template v-slot:default> Invite people to your room </template>
         </Card>
 
-        <Card href="/create-podcast-room">
+        <Card href="/create-room/podcast">
             <template v-slot:header>
                 <span>Create a podcast Room </span>
                 <MicrophoneIcon class="h-4" />
@@ -35,14 +35,19 @@
         <Button @click="checkout.mutate" :loading="checkout.isLoading.value">
             Start your free trial now
         </Button>
-        <p class="text-center">
-            Try KISS-CAM for free for 15 days. By signing up for KISS-CAM,
-            <br />
-            you agree to
-            <router-link to="/tos" class="underline">
-                our terms of service</router-link
-            >.
-        </p>
+        <div class="flex flex-col">
+            <p class="text-center">
+                Try KISS-CAM for free for 15 days, and feel free to resign if
+                you think it is not made for you.
+            </p>
+
+            <p class="text-center">
+                By signing up for KISS-CAM, you agree to
+                <router-link to="/tos" class="underline">
+                    our terms of service</router-link
+                >.
+            </p>
+        </div>
     </div>
 </template>
 
@@ -56,5 +61,5 @@ import { ArrowRightIcon, PlusIcon, MicrophoneIcon } from '@heroicons/vue/solid';
 import { useUserQuery, useCheckoutSessionMutation } from '../lib/composables';
 
 const { data: user } = useUserQuery();
-const checkout = useCheckoutSessionMutation(user.value);
+const checkout = useCheckoutSessionMutation();
 </script>

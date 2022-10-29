@@ -1,69 +1,95 @@
 import { supabase } from './supabase-client';
-import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useQuery, useMutation } from '@tanstack/vue-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { jsonFetch, wait } from './functions';
 import { loadStripe } from '@stripe/stripe-js';
 
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type {
+    Session as SupabaseSession,
+    User as SupabaseUser,
+} from '@supabase/supabase-js';
+import { ref } from 'vue';
 
-export type User = SupabaseUser & {
+export type Profile = {
     created_at: string;
     id: string;
     stripe_customer_id: string;
     subscription_end_at: string | null;
     subscribed_at: string | null;
+    access_token: string;
 };
 
-let user = ref<User | null>(null);
+export type User = SupabaseUser & Profile;
 
-async function getSession() {
-    const { data, error } = await supabase.auth.getSession();
-
-    if (error) {
-        console.error('Supabase error : ' + error);
-    }
-
-    return data?.session?.user;
-}
+export const showFooter = ref(true);
 
 export function useLogoutMutation() {
     const router = useRouter();
+    const queryClient = useQueryClient(); // empty user data
 
-    return useMutation(async () => {
-        await supabase.auth.signOut();
-        user.value = null;
-        router.replace({
-            name: 'login',
-        });
-    });
+    return useMutation(
+        async () => {
+            await supabase.auth.signOut();
+        },
+        {
+            onSuccess: async () => {
+                // Invalidate and refetch
+                await queryClient.invalidateQueries(['session']);
+                router.replace({
+                    name: 'login',
+                });
+            },
+        }
+    );
 }
 
 export function useUserQuery() {
-    return useQuery<User | null>(['session'], async () => {
-        // @ts-ignore
-        if (import.meta.env.MODE !== 'development') {
-            await wait(1500);
-        }
-
-        const user = await getSession();
-
-        if (user) {
-            // get profile data
-            const { data: profile } = await supabase
-                .from('profile')
-                .select()
-                .eq('id', user.id);
-            if (profile.length > 0) {
-                return { ...user, ...profile[0] };
+    return useQuery<User | null>(
+        ['session'],
+        async () => {
+            // @ts-ignore
+            if (import.meta.env.MODE !== 'development') {
+                await wait(1500);
             }
-        }
 
-        return null;
-    });
+            const {
+                data: { session },
+                error,
+            } = await supabase.auth.getSession();
+
+            if (error) {
+                console.error('Supabase error : ' + error);
+                throw error;
+            }
+
+            if (session?.user) {
+                // get profile data
+                const { data: profile } = await supabase
+                    .from('profile')
+                    .select()
+                    .eq('id', session.user.id);
+
+                if (profile.length > 0) {
+                    return {
+                        ...session.user,
+                        ...profile[0],
+                        access_token: session.access_token,
+                    };
+                }
+            }
+
+            return null;
+        },
+        {
+            staleTime: 50 * 60 * 1000, // 50 minutes * 60 seconds * 1000 milliseconds
+        }
+    );
 }
 
-export function useCheckoutSessionMutation(user?: User | null) {
+export function useCheckoutSessionMutation() {
+    const queryClient = useQueryClient();
+    const user = queryClient.getQueryData<User>(['session']);
+
     return useMutation(async () => {
         const stripe = await loadStripe(
             // @ts-ignore
@@ -71,10 +97,7 @@ export function useCheckoutSessionMutation(user?: User | null) {
         );
 
         if (stripe && user) {
-            const res = await jsonFetch<
-                | { id: string; error: undefined }
-                | { error: string; id: undefined }
-            >(
+            const res = await jsonFetch<{ id: string }>(
                 // @ts-ignore
                 `//${import.meta.env.VITE_WS_URL}/api/create-checkout-session`,
                 {
@@ -82,6 +105,9 @@ export function useCheckoutSessionMutation(user?: User | null) {
                     body: JSON.stringify({
                         uid: user.id,
                     }),
+                    headers: {
+                        Authorization: `Bearer ${user.access_token}`,
+                    },
                 }
             );
 
@@ -96,7 +122,11 @@ export function useCheckoutSessionMutation(user?: User | null) {
     });
 }
 
-export function usePortalSessionMutation(user?: User | null) {
+export function usePortalSessionMutation() {
+    const queryClient = useQueryClient();
+
+    const user = queryClient.getQueryData<User>(['session']);
+
     return useMutation(async () => {
         if (user) {
             const res = await jsonFetch<
@@ -107,6 +137,9 @@ export function usePortalSessionMutation(user?: User | null) {
                 body: JSON.stringify({
                     uid: user.id,
                 }),
+                headers: {
+                    Authorization: `Bearer ${user.access_token}`,
+                },
             });
 
             if (res.error !== undefined) {
@@ -114,6 +147,51 @@ export function usePortalSessionMutation(user?: User | null) {
             } else {
                 window.location.href = res.url;
             }
+        }
+    });
+}
+
+export function useCallbackMutation() {
+    const router = useRouter();
+
+    return useMutation(async (session: SupabaseSession | null) => {
+        if (!session) {
+            router.replace({
+                name: 'login',
+                state: {
+                    error: 'A server error has occurred, please log in again',
+                },
+            });
+            return;
+        }
+
+        const res = await jsonFetch(
+            `//${
+                // @ts-ignore
+                import.meta.env.VITE_WS_URL
+            }/api/create-user-if-not-exists`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({}),
+            }
+        );
+
+        if (res.error) {
+            console.error({ err: res.error, code: res.statusCode });
+
+            router.replace({
+                name: 'login',
+                state: {
+                    error: 'A server error has occurred, please log in again',
+                },
+            });
+        } else {
+            router.replace({
+                name: 'dashboard',
+            });
         }
     });
 }

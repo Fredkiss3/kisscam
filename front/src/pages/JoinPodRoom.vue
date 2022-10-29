@@ -1,5 +1,9 @@
 <template>
     <div class="h-screen flex flex-col items-center justify-center gap-4">
+        <div
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-44 w-44 rounded-full bg-purple-500 blur-[200px] z-[-1]"
+        ></div>
+
         <h1 class="font-bold text-4xl">Join a Podcast room</h1>
 
         <form @submit.prevent="handleSubmit" class="flex flex-col gap-2">
