@@ -23,9 +23,11 @@ import {
     createBillingPortalSession,
     createCheckoutSession,
     createUserIfNotExists,
+    getUser,
     stripeWebHookHandler,
 } from './routes';
 import { Type } from '@sinclair/typebox';
+import { isAuthed } from './middlewares';
 
 const server = Fastify({});
 
@@ -96,16 +98,7 @@ server.get('/api/ping', async (req, res) => {
 server.post(
     `/api/create-user-if-not-exists`,
     {
-        schema: {
-            body: Type.Object({
-                uid: Type.String({
-                    format: 'uuid',
-                }),
-                email: Type.String({
-                    format: 'email',
-                }),
-            }),
-        },
+        preHandler: [isAuthed],
     },
     createUserIfNotExists
 );
@@ -120,6 +113,7 @@ server.post(
                 }),
             }),
         },
+        preHandler: [isAuthed],
     },
     createCheckoutSession
 );
@@ -134,17 +128,35 @@ server.post(
                 }),
             }),
         },
+        preHandler: [isAuthed],
     },
     createBillingPortalSession
 );
 
+server.get(
+    `/api/get-user`,
+    {
+        schema: {
+            headers: Type.Object({
+                authorization: Type.RegEx(/[Bb]earer[ ]+(.)+/),
+            }),
+        },
+        preHandler: [isAuthed],
+    },
+    getUser
+);
+
+/**
+ * Add a custom Middleware with a modified body parser which parses the request to Buffer
+ * This is necessary for Stripe
+ */
 server.register((fastify, opts, next) => {
     fastify.addContentTypeParser(
         'application/json',
         { parseAs: 'buffer' },
         function (req, body, done) {
             try {
-                var newBody = {
+                const newBody = {
                     raw: body,
                 };
                 done(null, newBody);

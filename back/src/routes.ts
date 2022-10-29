@@ -5,14 +5,12 @@ import { supabase } from './lib/supabase-server';
 
 export async function createUserIfNotExists(
     req: FastifyRequest<{
-        Body: {
-            uid: string;
-            email: string;
-        };
+        Headers: { authorization: string };
     }>,
     res: FastifyReply
 ) {
-    const { data: user } = await supabase.auth.admin.getUserById(req.body.uid);
+    // @ts-ignore
+    const user = req.user;
 
     if (!user) {
         return res.code(401).send({
@@ -23,7 +21,7 @@ export async function createUserIfNotExists(
     const { data: profile, error } = await supabase
         .from('profile')
         .select()
-        .eq('id', req.body.uid);
+        .eq('id', user.id);
 
     if (error) {
         console.error(error);
@@ -35,13 +33,13 @@ export async function createUserIfNotExists(
     if (profile.length === 0) {
         // create stripe customer user
         const customer = await stripe.customers.create({
-            email: req.body.email,
+            email: user.email,
         });
 
         // then create supabse profile
         const { error } = await supabase
             .from('profile')
-            .insert({ id: req.body.uid, stripe_customer_id: customer.id });
+            .insert({ id: user.id, stripe_customer_id: customer.id });
 
         if (error) {
             return res.code(400).send({
@@ -54,8 +52,8 @@ export async function createUserIfNotExists(
     const expirationDate = new Date();
     expirationDate.setTime(expirationDate.getTime() + 3600);
     return res.code(200).send({
-        error: null,
         user,
+        ...profile,
     });
 }
 
@@ -129,6 +127,29 @@ export async function stripeWebHookHandler(
             }
             return;
         }
+        case 'customer.subscription.updated': {
+            const end = new Date(
+                (event.data.object as any).current_period_end * 1000
+            );
+
+            // end subscription
+            const { error } = await supabase
+                .from('profile')
+                .update({
+                    subscription_end_at: end,
+                })
+                .eq('stripe_customer_id', (event.data.object as any).customer)
+                .select();
+
+            if (error) {
+                console.error(error);
+                return res.status(400).send({
+                    success: false,
+                    error: `Webhook Error: ${error.toString()}`,
+                });
+            }
+            return;
+        }
     }
 
     return res.status(200).send({
@@ -138,18 +159,17 @@ export async function stripeWebHookHandler(
 
 export async function createCheckoutSession(
     req: FastifyRequest<{
-        Querystring: { data: string };
-        Body: { uid: string };
+        Headers: { authorization: string };
     }>,
     res: FastifyReply
 ) {
-    const {
-        data: { user },
-    } = await supabase.auth.admin.getUserById(req.body.uid);
+    // @ts-ignore
+    const user = req.user;
+
     const { data: profile } = await supabase
         .from('profile')
         .select()
-        .eq('id', req.body.uid);
+        .eq('id', user?.id);
 
     if (!user || profile.length === 0) {
         return res.code(401).send({
@@ -183,18 +203,17 @@ export async function createCheckoutSession(
 
 export async function createBillingPortalSession(
     req: FastifyRequest<{
-        Querystring: { data: string };
-        Body: { uid: string };
+        Headers: { authorization: string };
     }>,
     res: FastifyReply
 ) {
-    const {
-        data: { user },
-    } = await supabase.auth.admin.getUserById(req.body.uid);
+    // @ts-ignore
+    const user = req.user;
+
     const { data: profile } = await supabase
         .from('profile')
         .select()
-        .eq('id', req.body.uid);
+        .eq('id', user?.id);
 
     if (!user || profile.length === 0) {
         return res.code(401).send({
@@ -204,11 +223,23 @@ export async function createBillingPortalSession(
 
     const session = await stripe.billingPortal.sessions.create({
         customer: profile[0].stripe_customer_id as string,
-        return_url: `${process.env.PAYMENT_REDIRECT_HOST}/dashboard`,
+        return_url: `${process.env.PAYMENT_REDIRECT_HOST}/`,
     });
 
     return res.status(200).send({
         success: true,
         url: session.url,
+    });
+}
+
+export async function getUser(
+    req: FastifyRequest<{
+        Headers: { authorization: string };
+    }>,
+    res: FastifyReply
+) {
+    return res.status(200).send({
+        // @ts-ignore
+        user: req.user,
     });
 }
