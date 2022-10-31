@@ -1,3 +1,6 @@
+import { User } from '@supabase/supabase-js';
+import { supabase } from './supabase-server';
+
 /**
  * Generate an array of numbers from start to the end
  *
@@ -9,5 +12,22 @@
  * @returns
  */
 export function range(start: number, end: number): number[] {
-  return Array.from({ length: end - start }, (_, i) => i + start);
+    return Array.from({ length: end - start }, (_, i) => i + start);
+}
+
+export async function checkIfUserIsSubscribed(user: User | null) {
+    const { data: profiles } = await supabase
+        .from('profile')
+        .select()
+        .eq('id', user?.id);
+
+    if (user && profiles.length > 0) {
+        const profile = profiles[0];
+        const expDate = new Date(profile?.subscription_end_at!);
+        const today = new Date();
+
+        return expDate < today;
+    }
+
+    return false;
 }

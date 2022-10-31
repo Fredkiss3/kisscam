@@ -1,7 +1,9 @@
-import type { FastifyReply, FastifyRequest } from 'fastify';
 import { stripe } from './lib/stripe-client';
-import type Stripe from 'stripe';
 import { supabase } from './lib/supabase-server';
+import { checkIfUserIsSubscribed } from './lib/functions';
+
+import type Stripe from 'stripe';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 export async function createUserIfNotExists(
     req: FastifyRequest<{
@@ -13,7 +15,7 @@ export async function createUserIfNotExists(
     const user = req.user;
 
     if (!user) {
-        return res.code(401).send({
+        return res.code(403).send({
             error: `This user is not registered, please retry`,
         });
     }
@@ -166,19 +168,19 @@ export async function createCheckoutSession(
     // @ts-ignore
     const user = req.user;
 
-    const { data: profile } = await supabase
+    const { data: profiles } = await supabase
         .from('profile')
         .select()
         .eq('id', user?.id);
 
-    if (!user || profile.length === 0) {
-        return res.code(401).send({
+    if (!user || profiles.length === 0) {
+        return res.code(403).send({
             error: `You are not authorized to view this page.`,
         });
     }
 
     const session = await stripe.checkout.sessions.create({
-        customer: profile[0].stripe_customer_id as string,
+        customer: profiles[0].stripe_customer_id as string,
         mode: 'subscription',
         line_items: [
             {
@@ -210,19 +212,19 @@ export async function createBillingPortalSession(
     // @ts-ignore
     const user = req.user;
 
-    const { data: profile } = await supabase
+    const { data: profiles } = await supabase
         .from('profile')
         .select()
         .eq('id', user?.id);
 
-    if (!user || profile.length === 0) {
-        return res.code(401).send({
+    if (!user || profiles.length === 0) {
+        return res.code(403).send({
             error: `You are not authorized to view this page.`,
         });
     }
 
     const session = await stripe.billingPortal.sessions.create({
-        customer: profile[0].stripe_customer_id as string,
+        customer: profiles[0].stripe_customer_id as string,
         return_url: `${process.env.PAYMENT_REDIRECT_HOST}/`,
     });
 

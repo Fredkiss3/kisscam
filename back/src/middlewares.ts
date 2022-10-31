@@ -16,13 +16,6 @@ export async function isAuthed(
         error,
     } = await supabase.auth.getUser(jwt);
 
-    console.log({
-        parts,
-        jwt,
-        user,
-        error,
-    });
-
     if (error !== null || user === null) {
         return res.status(401).send({
             error: 'Unauthenticated',

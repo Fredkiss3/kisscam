@@ -2,11 +2,16 @@ import { initClient } from '../lib/redis';
 import { Entity, EntityData, Schema } from 'redis-om';
 
 export class Client extends Entity {
-    id?: string;
+    uid?: string;
     name?: string;
+    socketId?: string;
     roomId?: string;
-    isHost?: boolean;
-    isEmbed?: boolean;
+    embbeddedClientUid?: string;
+
+    isHost = false;
+    isEmbed = false;
+    isOnline = false;
+    pending = false;
 
     constructor(schema: Schema<any>, id: string, data?: EntityData) {
         super(schema, id, data);
@@ -18,6 +23,7 @@ export class Room extends Entity {
     name?: string;
     twitchHostName?: string;
     podTitle?: string;
+    hostUid?: string;
 
     constructor(schema: Schema<any>, id: string, data?: EntityData) {
         super(schema, id, data);
@@ -26,14 +32,26 @@ export class Room extends Entity {
 
 /* create Schemas */
 const clientSchema = new Schema(Client, {
-    id: {
+    uid: {
+        type: 'string',
+    },
+    socketId: {
+        type: 'string',
+    },
+    roomId: {
+        type: 'string',
+    },
+    pending: {
+        type: 'boolean',
+    },
+    embbeddedClientUid: {
         type: 'string',
     },
     name: {
         type: 'string',
     },
-    roomId: {
-        type: 'string',
+    isOnline: {
+        type: 'boolean',
     },
     isHost: {
         type: 'boolean',
@@ -44,6 +62,9 @@ const clientSchema = new Schema(Client, {
 });
 
 const roomSchema = new Schema(Room, {
+    hostUid: {
+        type: 'string',
+    },
     id: {
         type: 'string',
     },
