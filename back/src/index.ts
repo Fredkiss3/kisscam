@@ -60,6 +60,8 @@ server.ready().then(() => {
                     onCandidate,
                     onDenyRoomAccess,
                     onGrantRoomAccess,
+                    onMuteParticipant,
+                    onRemoveRoomAccess,
                 }) => {
                     socket.on(SocketServerEvents.CreateRoom, onCreateRoom);
                     socket.on(SocketServerEvents.JoinRoom, onJoinRoom);
@@ -73,6 +75,14 @@ server.ready().then(() => {
                     socket.on(
                         SocketServerEvents.DenyRoomAccess,
                         onDenyRoomAccess
+                    );
+                    socket.on(
+                        SocketServerEvents.MuteParticipant,
+                        onMuteParticipant
+                    );
+                    socket.on(
+                        SocketServerEvents.RemoveRoomAccess,
+                        onRemoveRoomAccess
                     );
 
                     socket.on(`disconnect`, onDisconnect);
