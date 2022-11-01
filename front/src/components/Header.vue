@@ -77,8 +77,8 @@ import {
 } from '../lib/composables';
 
 const { data: user } = useUserQuery();
-const logoutMutation = useLogoutMutation();
 const portalSessionMutation = usePortalSessionMutation();
+const logoutMutation = useLogoutMutation();
 async function logout() {
     await logoutMutation.mutateAsync();
 }

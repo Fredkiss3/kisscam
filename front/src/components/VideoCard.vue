@@ -16,7 +16,7 @@
             class="absolute inset-0 p-4 flex flex-col justify-between items-center"
         >
             <div class="flex justify-end w-full">
-                <Button variant="dark" square v-if="isHost">
+                <Button variant="dark" is-square v-if="isHost">
                     <HomeIcon class="h-4 text-white" />
                 </Button>
             </div>
@@ -35,14 +35,14 @@
                     <MutedMicIcon v-if="muted" class="text-danger h-4" />
                 </Tag>
                 <Tag>{{ name }}</Tag>
-                <Button
+                <!-- <Button
                     variant="hollow"
-                    square
+                    is-square
                     @click="emit('copyEmbed')"
                     v-if="!isMe"
                 >
                     <LinkIcon class="text-white h-4" />
-                </Button>
+                </Button> -->
             </div>
         </div>
     </div>

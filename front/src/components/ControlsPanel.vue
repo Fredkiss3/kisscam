@@ -27,7 +27,7 @@
             <Button
                 variant="hollow"
                 class="p-3"
-                square
+                is-square
                 :title="
                     store.user.audioActivated
                         ? 'Mute yourself'
@@ -44,7 +44,7 @@
             <Button
                 variant="hollow"
                 class="p-3"
-                square
+                is-square
                 :title="
                     store.user.videoActivated
                         ? 'Disable your camera'
@@ -65,7 +65,7 @@
                 title="Share your room link"
                 variant="primary"
                 class="p-3"
-                square
+                is-square
                 @click="copyRoomLinkToClipboard"
                 v-if="variant === 'detailled'"
             >

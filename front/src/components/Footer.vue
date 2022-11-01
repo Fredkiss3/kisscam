@@ -20,7 +20,7 @@
         <Button
             class="absolute right-4 !p-1"
             variant="hollow"
-            square
+            is-square
             @click="showFooter = false"
         >
             <XIcon class="h-4" />

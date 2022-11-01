@@ -1,5 +1,7 @@
 import { createApp } from 'vue';
 import { VueQueryPlugin } from '@tanstack/vue-query';
+import FloatingVue from 'floating-vue';
+import 'floating-vue/dist/style.css';
 
 import App from './App.vue';
 import './assets/app.css';
@@ -16,7 +18,6 @@ import Login from './pages/Login.vue';
 import Callback from './pages/auth/CallbackPage.vue';
 import AuthLayout from './pages/auth/Layout.vue';
 import ProtectedLayout from './pages/ProtectedLayout.vue';
-import DefaultLayout from './pages/DefaultLayout.vue';
 import PaymentGatedLayout from './pages/PaymentGatedLayout.vue';
 import Success from './pages/payment/Success.vue';
 import Cancelled from './pages/payment/Cancelled.vue';
@@ -55,6 +56,22 @@ const routes: RouteRecordRaw[] = [
                 ],
             },
             {
+                path: '/join',
+                name: 'join',
+                children: [
+                    {
+                        path: 'room',
+                        name: 'join-call-room',
+                        component: JoinRoom,
+                    },
+                    {
+                        path: 'pod-room',
+                        name: 'join-pod-room',
+                        component: JoinPodRoom,
+                    },
+                ],
+            },
+            {
                 path: 'create-room',
                 component: PaymentGatedLayout,
                 children: [
@@ -72,19 +89,7 @@ const routes: RouteRecordRaw[] = [
             },
         ],
     },
-    {
-        path: '/join',
-        name: 'join',
-        component: DefaultLayout,
-        children: [
-            { path: 'room', name: 'join-call-room', component: JoinRoom },
-            {
-                path: 'pod-room',
-                name: 'join-pod-room',
-                component: JoinPodRoom,
-            },
-        ],
-    },
+
     { path: '/login', name: 'login', component: Login },
     {
         path: '/auth',
@@ -131,5 +136,6 @@ const router = createRouter({
 const app = createApp(App);
 app.use(router);
 app.use(VueQueryPlugin);
+app.use(FloatingVue);
 
 app.mount('#app');
