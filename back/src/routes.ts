@@ -189,10 +189,10 @@ export async function createCheckoutSession(
             },
         ],
         subscription_data: {
-            trial_period_days: 15,
+            trial_period_days: 30,
         },
         payment_method_types: ['card'],
-        payment_method_collection: 'always',
+        payment_method_collection: 'if_required',
         success_url: `${process.env.PAYMENT_REDIRECT_HOST}/payment/success`,
         cancel_url: `${process.env.PAYMENT_REDIRECT_HOST}/payment/cancelled`,
     });

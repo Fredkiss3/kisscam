@@ -37,15 +37,20 @@
                 @click="checkout.mutate"
                 :loading="checkout.isLoading.value"
             >
-                Start your free trial now
+                Start your 30 days free trial
             </Button>
             <div class="flex flex-col">
                 <p class="text-center">
-                    Try KISS-CAM for free for 15 days, and feel free to resign
-                    if you think it is not made for you.
+                    Try KISS-CAM for free for 30 days,
+                    <strong class="font-bold"
+                        >*no credit card required.*</strong
+                    >
+                </p>
+                <p class="text-center">
+                    Feel free to resign if you think this is not made for you.
                 </p>
 
-                <p class="text-center">
+                <p class="text-center mt-4">
                     By signing up for KISS-CAM, you agree to
                     <router-link to="/tos" class="underline">
                         our terms of service</router-link
