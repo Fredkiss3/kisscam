@@ -57,7 +57,7 @@ const classes = computed(() => {
         'bg-secondary cursor-not-allowed': !!props.disabled || props.loading,
         'p-2': props.isSquare,
         'py-2 px-4': !props.isSquare,
-        'rounded-md': true,
+        'rounded-md flex gap-2 items-center': true,
         [props.class]: true,
     };
 });
