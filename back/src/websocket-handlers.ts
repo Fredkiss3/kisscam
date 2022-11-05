@@ -239,7 +239,7 @@ export default async function (
                 .search()
                 .where('roomId')
                 .is.equalTo(roomId)
-                .where('id')
+                .where('uid')
                 .is.not.equalTo(userId)
                 .and('isOnline')
                 .is.equalTo(true)
@@ -719,7 +719,7 @@ export default async function (
         if (!client.pending) {
             // Update the client status as offline
             client.isOnline = false;
-            client.socketId = undefined;
+            client.socketId = null;
             await clientRepository.save(client);
         } else {
             // Remove pending client

@@ -4,7 +4,7 @@ import { Entity, EntityData, Schema } from 'redis-om';
 export class Client extends Entity {
     uid?: string;
     name?: string;
-    socketId?: string;
+    socketId?: string | null;
     roomId?: string;
     embbeddedClientUid?: string;
 
