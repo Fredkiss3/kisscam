@@ -56,6 +56,7 @@ importers:
       '@vitejs/plugin-vue': ^2.3.3
       autoprefixer: ^10.4.7
       floating-vue: 2.0.0-beta.20
+      pinia: ^2.0.23
       postcss: ^8.4.14
       prettier: ^2.6.2
       socket.io-client: ^4.5.1
@@ -72,6 +73,7 @@ importers:
       '@supabase/supabase-js': 2.0.1
       '@tanstack/vue-query': 4.13.1_vue@3.2.39
       floating-vue: 2.0.0-beta.20_vue@3.2.39
+      pinia: 2.0.23_qhlkyjfnqj2x43wbbq5blq2r5y
       socket.io-client: 4.5.2
       vue: 3.2.39
       vue-router: 4.1.5_vue@3.2.39
@@ -1584,6 +1586,24 @@ packages:
     resolution: {integrity: sha512-udgsAY+fTnvv7kI7aaxbqwWNb0AHiB0qBO89PZKPkoTmGOgdbrHDKD+0B2X4uTfJ/FT1R09r9gTsjUjNJotuog==}
     engines: {node: '>=0.10.0'}
     dev: true
+
+  /pinia/2.0.23_qhlkyjfnqj2x43wbbq5blq2r5y:
+    resolution: {integrity: sha512-N15hFf4o5STrxpNrib1IEb1GOArvPYf1zPvQVRGOO1G1d74Ak0J0lVyalX/SmrzdT4Q0nlEFjbURsmBmIGUR5Q==}
+    peerDependencies:
+      '@vue/composition-api': ^1.4.0
+      typescript: '>=4.4.4'
+      vue: ^2.6.14 || ^3.2.0
+    peerDependenciesMeta:
+      '@vue/composition-api':
+        optional: true
+      typescript:
+        optional: true
+    dependencies:
+      '@vue/devtools-api': 6.4.4
+      typescript: 4.6.3
+      vue: 3.2.39
+      vue-demi: 0.13.11_vue@3.2.39
+    dev: false
 
   /pino-abstract-transport/1.0.0:
     resolution: {integrity: sha512-c7vo5OpW4wIS42hUVcT5REsL8ZljsUfBjqV/e2sFxmFEFZiq1XLUp5EYLtuDH6PEHq9W1egWqRbnLUP5FuZmOA==}

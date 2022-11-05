@@ -1,5 +1,10 @@
 import type { Socket } from 'socket.io-client';
-import type { ServerEventMap, ClientEventMap } from '@kisscam/shared';
+import type {
+    SocketClientEvents,
+    ServerEventMap,
+    ClientEventMap,
+} from '@kisscam/shared';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export type User = {
     id: string | null;
@@ -42,6 +47,8 @@ export type StoreState =
     | 'INITIAL'
     | 'CREATING_ROOM'
     | 'ROOM_CREATED'
+    | 'ROOM_CREATION_REFUSED'
+    | 'ROOM_ACCESS_DENIED'
     | 'JOINING_ROOM'
     | 'ROOM_JOINED'
     | 'ROOM_NOT_FOUND';
@@ -90,3 +97,69 @@ export function isToggleMessageType(
 ): message is ToggleMessageType {
     return 'payload' in message;
 }
+
+export type Profile = {
+    created_at: string;
+    id: string;
+    stripe_customer_id: string;
+    subscription_end_at: string | null;
+    subscribed_at: string | null;
+    access_token: string;
+};
+
+export type UserPrefs = {
+    stream: MediaStream | null;
+    username: string;
+    podTitle: string | undefined;
+    twitchUserName: string | undefined;
+    videoActivated: boolean;
+    audioActivated: boolean;
+};
+
+export type AuthUser = SupabaseUser & Profile;
+
+export type PiniaStore = {
+    state: {
+        socket: Socket<ClientEventMap, ServerEventMap> | null;
+        user: AuthUser | null;
+        preferences: Partial<UserPrefs>;
+        currentStep: StoreState;
+        room: Room;
+        peers: Record<string, Peer>; // clientId: Peer
+    };
+    actions: {
+        createRoom(args: {
+            roomName: string;
+            username: string;
+            twitchHostName?: string;
+            podTitle?: string;
+        }): Promise<void>;
+        joinRoom(args: {
+            id: string;
+            username: string;
+            isEmbed?: boolean;
+            embbededClientUid?: string;
+        }): Promise<void>;
+        saveUserPreferences(): void;
+        initSocket: () => void;
+        leaveRoom: () => void;
+        setStream: (stream: MediaStream) => void;
+        // events
+        onRoomCreated: ClientEventMap[SocketClientEvents.RoomCreated];
+        onRoomAccessDenied: ClientEventMap[SocketClientEvents.RoomAccessDenied];
+        onRoomJoined: ClientEventMap[SocketClientEvents.RoomJoined];
+    };
+    //
+    // peers: Record<string, Peer>; // clientId: Peer
+    // updateUserName: (args: { username: string }) => void;
+    // leaveRoom: () => void;
+    // toggleVideo: () => Promise<void>;
+    // toggleAudio: () => Promise<void>;
+    // syncStream: (args: {
+    //     clientId: string;
+    //     state: {
+    //         videoActivated?: boolean;
+    //         audioActivated?: boolean;
+    //     };
+    // }) => void;
+};

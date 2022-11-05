@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import { VueQueryPlugin } from '@tanstack/vue-query';
 import FloatingVue from 'floating-vue';
 import 'floating-vue/dist/style.css';
+import { createPinia } from 'pinia';
 
 import App from './App.vue';
 import './assets/app.css';
@@ -38,6 +39,18 @@ const routes: RouteRecordRaw[] = [
                 path: '',
                 name: 'dashboard',
                 component: Home,
+            },
+
+            {
+                path: '/room/:roomId([a-z0-9]{10})',
+                name: 'call-room',
+                component: Room,
+            },
+
+            {
+                path: '/pod/:roomId([a-z0-9]{10})',
+                name: 'podcast-room',
+                component: PodCastRoom,
             },
 
             {
@@ -104,20 +117,11 @@ const routes: RouteRecordRaw[] = [
     },
 
     {
-        path: '/room/:roomId([a-z0-9]{10})',
-        name: 'call-room',
-        component: Room,
-    },
-    {
         path: '/embed/:roomId([a-z0-9]{10})/:filterId([A-Za-z0-9-_]+)',
         name: 'embed',
         component: Embed,
     },
-    {
-        path: '/pod/:roomId([a-z0-9]{10})',
-        name: 'podcast-room',
-        component: PodCastRoom,
-    },
+
     {
         path: '/:pathMatch(.*)',
         name: 'not-found',
@@ -133,7 +137,10 @@ const router = createRouter({
     routes,
 });
 
+const pinia = createPinia();
 const app = createApp(App);
+
+app.use(pinia);
 app.use(router);
 app.use(VueQueryPlugin);
 app.use(FloatingVue);

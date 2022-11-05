@@ -12,11 +12,11 @@
             <VideoCard
                 name="You"
                 :is-me="true"
-                :video-src="store.user.stream ?? null"
-                :client-id="store.user.id!"
+                :video-src="store.preferences?.stream ?? null"
+                :client-id="store.user?.id!"
                 :peeps-no="randomInt(1, 105)"
                 :muted="true"
-                :video-activated="store.user.videoActivated"
+                :video-activated="store.preferences?.videoActivated"
             />
 
             <VideoCard
@@ -35,6 +35,20 @@
         <ControlsPanel class="fixed bottom-24" />
     </div>
 
+    <div
+        v-else-if="store.currentStep === 'ROOM_ACCESS_DENIED'"
+        class="flex flex-col gap-2 items-center justify-center h-screen w-full"
+    >
+        <h2 class="font-semibold text-2xl">ROOM ACCESS DENIED</h2>
+
+        <p>The owner of the room refused your request to join the room.</p>
+
+        <router-link to="/" class="flex gap-2 items-center underline">
+            <ArrowLeftIcon class="h-4" />
+            Go Home
+        </router-link>
+    </div>
+
     <div v-else class="flex gap-2 items-center justify-center h-screen w-full">
         <Loader />
         <h2>Connecting to the room...</h2>
@@ -43,9 +57,9 @@
 
 <script setup lang="ts">
 // utils & functions
-import { computed, onMounted, onUnmounted, watch, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { randomInt } from '../lib/functions';
-import { useStore } from '../lib/store';
+import { useStore } from '../lib/pinia-store';
 
 // components
 import NotFound from '../pages/NotFound.vue';
@@ -53,9 +67,16 @@ import Loader from '../components/Loader.vue';
 import VideoCard from '../components/VideoCard.vue';
 import ControlsPanel from '../components/ControlsPanel.vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ArrowLeftIcon } from '@heroicons/vue/outline';
 
 const router = useRouter();
 const route = useRoute();
+console.log({
+    route: {
+        path: route.path,
+        name: route.name,
+    },
+});
 
 const store = useStore();
 
@@ -68,42 +89,61 @@ const clients = computed(() => {
             id,
             ...client,
         }));
+
+    return [];
 });
 
 onMounted(async () => {
-    if (!store.user.name) {
+    if (!store.preferences.username) {
         router.push({
             name: 'join-call-room',
             query: {
                 roomId: route.params.roomId,
             },
         });
-        alert(`You must set a username before joining a room`);
+        alert(`Please set a username before joining a room`);
         return;
     }
 
+    const stream = new MediaStream();
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const streamVideo = await navigator.mediaDevices.getUserMedia({
             video: true,
-            audio: true,
         });
 
-        if (stream) {
-            store.user.stream = stream;
+        streamVideo.getTracks().forEach((track) => stream.addTrack(track));
+    } catch (e) {
+        // do nothing
+        console.log('Video access denied');
+    }
+
+    // get audio
+    try {
+        const streamAudio = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+        });
+        streamAudio.getTracks().forEach((track) => stream.addTrack(track));
+
+        if (streamAudio) {
+            store.setStream(stream);
             store.joinRoom({
                 id: route.params.roomId as string,
-                username: store.user.name,
+                username: store.preferences.username,
             });
         } else {
             alert(
-                'You must allow access to your camera and microphone to join a room'
+                'You must allow access at least to your microphone to join a room'
             );
+            router.push({
+                name: 'join-call-room',
+                query: {
+                    roomId: route.params.roomId,
+                },
+            });
         }
     } catch (error) {
-        console.error(error);
-
         alert(
-            'You must allow access to your camera and microphone to join a room'
+            'You must allow access at least to your microphone to join a room'
         );
         router.push({
             name: 'join-call-room',

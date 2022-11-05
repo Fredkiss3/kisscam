@@ -1,4 +1,8 @@
 <template>
+    <!-- <div class="grid grid-cols-10"> -->
+    <!-- <div class="col-span-2">
+            <Sidebar></Sidebar>
+        </div> -->
     <div class="col-span-8">
         <div
             class="flex flex-col items-center gap-4 md:flex-row"
@@ -59,6 +63,7 @@
             </div>
         </div>
     </div>
+    <!-- </div> -->
 </template>
 
 <script setup lang="ts">

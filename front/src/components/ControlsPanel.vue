@@ -29,32 +29,36 @@
                 class="p-3"
                 is-square
                 :title="
-                    store.user.audioActivated
+                    store.preferences.audioActivated
                         ? 'Mute yourself'
                         : 'Unmute yourself'
                 "
                 @click="store.toggleAudio()"
             >
-                <MicIcon v-if="store.user.audioActivated" class="h-6" />
+                <MicIcon v-if="store.preferences.audioActivated" class="h-6" />
                 <MutedMicIcon
-                    v-if="!store.user.audioActivated"
+                    v-if="!store.preferences.audioActivated"
                     class="h-6 text-secondary"
                 />
             </Button>
             <Button
                 variant="hollow"
                 class="p-3"
+                :disabled="!store.hasVideo"
                 is-square
                 :title="
-                    store.user.videoActivated
+                    store.preferences.videoActivated
                         ? 'Disable your camera'
                         : 'Enable your camera'
                 "
                 @click="store.toggleVideo()"
             >
-                <CameraIcon v-if="store.user.videoActivated" class="h-6" />
+                <CameraIcon
+                    v-if="store.preferences.videoActivated"
+                    class="h-6"
+                />
                 <CameraOffIcon
-                    v-if="!store.user.videoActivated"
+                    v-if="!store.preferences.videoActivated"
                     class="h-6 text-secondary"
                 />
             </Button>
@@ -87,7 +91,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useStore } from '../lib/store';
+import { useStore } from '../lib/pinia-store';
 import { LogoutIcon } from '@heroicons/vue/outline';
 
 import RssIcon from './RssIcon.vue';

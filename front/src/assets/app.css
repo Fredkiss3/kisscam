@@ -2,12 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    @apply bg-darkest;
-    font-family: Avenir, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    color: white;
+@layer base {
+    body {
+        @apply bg-darkest;
+        font-family: Avenir, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        color: white;
+    }
+
+    /* html, */
+    body {
+        min-height: 100vh;
+    }
+
+    #app {
+        height: 100%;
+    }
 }
 
 @layer components {
