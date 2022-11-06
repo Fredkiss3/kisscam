@@ -49,6 +49,7 @@ export type StoreState =
     | 'ROOM_CREATED'
     | 'ROOM_CREATION_REFUSED'
     | 'ROOM_ACCESS_DENIED'
+    | 'ROOM_ACCESS_PENDING'
     | 'JOINING_ROOM'
     | 'ROOM_JOINED'
     | 'ROOM_NOT_FOUND';
@@ -147,6 +148,10 @@ export type PiniaStore = {
         // events
         onRoomCreated: ClientEventMap[SocketClientEvents.RoomCreated];
         onRoomAccessDenied: ClientEventMap[SocketClientEvents.RoomAccessDenied];
+        onRoomAccessPending: ClientEventMap[SocketClientEvents.RoomAccessPending];
+        onRoomAccessGranted: ClientEventMap[SocketClientEvents.RoomAccessGranted];
+        onRoomAccessRequired: ClientEventMap[SocketClientEvents.RoomAccessRequired];
+        onRoomCreationRefused: ClientEventMap[SocketClientEvents.RoomCreationRefused];
         onRoomJoined: ClientEventMap[SocketClientEvents.RoomJoined];
     };
     //

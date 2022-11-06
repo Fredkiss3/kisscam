@@ -49,6 +49,22 @@
         </router-link>
     </div>
 
+    <div
+        v-else-if="store.currentStep === 'ROOM_ACCESS_PENDING'"
+        class="flex flex-col gap-2 items-center justify-center h-screen w-full"
+    >
+        <h2 class="font-semibold text-2xl">
+            WAITING FOR OWNER OF THE ROOM TO GIVE ACCESS
+        </h2>
+
+        <p>Your request has been sent to the owner Please wait.</p>
+
+        <router-link to="/" class="flex gap-2 items-center underline">
+            <ArrowLeftIcon class="h-4" />
+            Go Home
+        </router-link>
+    </div>
+
     <div v-else class="flex gap-2 items-center justify-center h-screen w-full">
         <Loader />
         <h2>Connecting to the room...</h2>
