@@ -8,7 +8,7 @@ import {
     SocketClientEvents,
     SocketServerEvents,
 } from '@kisscam/shared';
-import { supabase } from './lib/supabase-server';
+import { supabaseAdmin, supabaseClient } from './lib/supabase-server';
 import { checkIfUserIsSubscribed } from './lib/functions';
 
 export default async function (
@@ -33,7 +33,7 @@ export default async function (
         }) {
             const {
                 data: { user },
-            } = await supabase.auth.getUser(accessToken);
+            } = await supabaseClient.auth.getUser(accessToken);
 
             if (await checkIfUserIsSubscribed(user)) {
                 clientSocket.emit(SocketClientEvents.RoomCreationRefused);
@@ -101,16 +101,17 @@ export default async function (
             // Check user authentication
             const {
                 data: { user },
-            } = await supabase.auth.admin.getUserById(clientUid);
+                error,
+            } = await supabaseAdmin.auth.admin.getUserById(clientUid);
 
-            if (!user) {
+            if (!user || error) {
+                console.error(error);
                 clientSocket.emit(SocketClientEvents.RoomAccessDenied, {
                     roomId,
                 });
                 return;
             }
 
-            // check if user needs access
             // get all the clients in the room
             const clientsInRoom = await clientRepository
                 .search()
@@ -128,10 +129,13 @@ export default async function (
                 .is.equalTo(roomId)
                 .return.first();
 
+            // check if user needs access
             if (
-                user.id !== room.hostUid ||
+                user.id !== room.hostUid &&
                 clientsInRoom.find((c) => c.uid === user.id) === undefined
             ) {
+                console.log(`user is not host ?`);
+
                 // Deny access to embed if client have not been accepted previously
                 // or is still pending
                 if (asEmbed) {
@@ -168,6 +172,7 @@ export default async function (
 
             // Check if embedded user exists
             if (asEmbed) {
+                console.log(`user is embed ?`);
                 if (!embedClientUid) {
                     clientSocket.emit(SocketClientEvents.RoomAccessDenied, {
                         roomId,

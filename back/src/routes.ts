@@ -1,6 +1,5 @@
 import { stripe } from './lib/stripe-client';
-import { supabase } from './lib/supabase-server';
-import { checkIfUserIsSubscribed } from './lib/functions';
+import { supabaseAdmin } from './lib/supabase-server';
 
 import type Stripe from 'stripe';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -20,7 +19,7 @@ export async function createUserIfNotExists(
         });
     }
 
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAdmin
         .from('profile')
         .select()
         .eq('id', user.id);
@@ -39,7 +38,7 @@ export async function createUserIfNotExists(
         });
 
         // then create supabse profile
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from('profile')
             .insert({ id: user.id, stripe_customer_id: customer.id });
 
@@ -93,7 +92,7 @@ export async function stripeWebHookHandler(
             );
             const end = new Date((event.data.object as any).period_end * 1000);
 
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('profile')
                 .update({
                     subscribed_at: start.toISOString(),
@@ -112,7 +111,7 @@ export async function stripeWebHookHandler(
         }
         case 'customer.subscription.deleted': {
             // end subscription
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('profile')
                 .update({
                     subscribed_at: null,
@@ -135,7 +134,7 @@ export async function stripeWebHookHandler(
             );
 
             // end subscription
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('profile')
                 .update({
                     subscription_end_at: end,
@@ -168,7 +167,7 @@ export async function createCheckoutSession(
     // @ts-ignore
     const user = req.user;
 
-    const { data: profiles } = await supabase
+    const { data: profiles } = await supabaseAdmin
         .from('profile')
         .select()
         .eq('id', user?.id);
@@ -212,7 +211,7 @@ export async function createBillingPortalSession(
     // @ts-ignore
     const user = req.user;
 
-    const { data: profiles } = await supabase
+    const { data: profiles } = await supabaseAdmin
         .from('profile')
         .select()
         .eq('id', user?.id);

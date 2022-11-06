@@ -1,5 +1,5 @@
 import { User } from '@supabase/supabase-js';
-import { supabase } from './supabase-server';
+import { supabaseAdmin } from './supabase-server';
 
 /**
  * Generate an array of numbers from start to the end
@@ -16,7 +16,7 @@ export function range(start: number, end: number): number[] {
 }
 
 export async function checkIfUserIsSubscribed(user: User | null) {
-    const { data: profiles } = await supabase
+    const { data: profiles } = await supabaseAdmin
         .from('profile')
         .select()
         .eq('id', user?.id);

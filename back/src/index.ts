@@ -84,6 +84,7 @@ server.ready().then(() => {
                         SocketServerEvents.RemoveRoomAccess,
                         onRemoveRoomAccess
                     );
+                    socket.on(SocketServerEvents.LeaveRoom, onDisconnect);
 
                     socket.on(`disconnect`, onDisconnect);
                 }
