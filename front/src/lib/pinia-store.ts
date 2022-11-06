@@ -149,10 +149,9 @@ export const usePiniaStore = defineStore<
 
         leaveRoom() {
             // reset all room data
-            this.socket?.disconnect();
+            this.socket?.emit(SocketServerEvents.LeaveRoom);
             this.room.id = null;
             this.room.clients = {};
-            this.initSocket();
 
             // close all peer connections
             Object.entries(this.peers).forEach(([id, peer]) => {

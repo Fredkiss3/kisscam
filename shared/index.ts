@@ -108,9 +108,12 @@ export enum SocketServerEvents {
 
     // Mute camera of video of participant
     MuteParticipant = 'server:mute-participant',
+    LeaveRoom = 'server:leave-room',
 }
 
 export interface ServerEventMap {
+    [SocketServerEvents.LeaveRoom]: () => void;
+
     [SocketServerEvents.CreateRoom]: (arg: {
         roomName: string;
         accessToken: string;
