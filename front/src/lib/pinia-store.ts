@@ -74,6 +74,9 @@ export const usePiniaStore = defineStore<
         },
     },
     actions: {
+        /*******************************/
+        /*********  ACTIONS  ************/
+        /*******************************/
         initSocket() {
             if (!this.socket) {
                 this.socket = io(`//${import.meta.env.VITE_WS_URL}/`, {
@@ -151,6 +154,7 @@ export const usePiniaStore = defineStore<
 
         async joinRoom({ id, username, isEmbed, embbededClientUid }) {
             if (this.user) {
+                this.currentStep = 'JOINING_ROOM';
                 this.preferences.username = username;
                 this.saveUserPreferences();
 
@@ -164,6 +168,45 @@ export const usePiniaStore = defineStore<
             }
         },
 
+        leaveRoom() {
+            // reset all room data
+            this.socket?.emit(SocketServerEvents.LeaveRoom);
+            this.room.id = null;
+            this.room.clients = {};
+
+            // close all peer connections
+            Object.entries(this.peers).forEach(([id, peer]) => {
+                peer.connection.close();
+            });
+            this.peers = {};
+        },
+
+        saveUserPreferences() {
+            localStorage.setItem(
+                'userPreferences',
+                JSON.stringify(this.preferences)
+            );
+        },
+
+        grantAccessToRoom(toClientId) {
+            this.socket?.emit(SocketServerEvents.GrantRoomAccess, {
+                toClientId,
+            });
+        },
+
+        denyAccessToRoom(toClientId) {
+            this.socket?.emit(SocketServerEvents.DenyRoomAccess, {
+                toClientId,
+            });
+
+            const { [toClientId]: client, ...otherClients } = this.room.clients;
+
+            this.room.clients = otherClients;
+        },
+
+        /*******************************/
+        /*********  EVENTS  ************/
+        /*******************************/
         onRoomCreated({ roomId, roomName, podTitle, twitchHostName }) {
             console.log(`Room Created : ${roomId} => ${roomName}`);
 
@@ -212,14 +255,12 @@ export const usePiniaStore = defineStore<
                 };
             }
         },
-        onRoomAccessGranted() {
-            if (this.room.id) {
-                this.currentStep = 'JOINING_ROOM';
-                this.joinRoom({
-                    id: this.room.id,
-                    username: this.preferences.username!,
-                });
-            }
+
+        onRoomAccessGranted({ roomId }) {
+            this.joinRoom({
+                id: roomId,
+                username: this.preferences.username!,
+            });
         },
 
         onRoomJoined({
@@ -261,26 +302,6 @@ export const usePiniaStore = defineStore<
             );
 
             this.room.clients = listClients;
-        },
-
-        leaveRoom() {
-            // reset all room data
-            this.socket?.emit(SocketServerEvents.LeaveRoom);
-            this.room.id = null;
-            this.room.clients = {};
-
-            // close all peer connections
-            Object.entries(this.peers).forEach(([id, peer]) => {
-                peer.connection.close();
-            });
-            this.peers = {};
-        },
-
-        saveUserPreferences() {
-            localStorage.setItem(
-                'userPreferences',
-                JSON.stringify(this.preferences)
-            );
         },
     },
 });

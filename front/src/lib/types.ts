@@ -148,6 +148,8 @@ export type PiniaStore = {
         initSocket: () => void;
         leaveRoom: () => void;
         setStream: (stream: MediaStream) => void;
+        grantAccessToRoom: (toClientId: string) => void;
+        denyAccessToRoom: (toClientId: string) => void;
         // events
         onRoomCreated: ClientEventMap[SocketClientEvents.RoomCreated];
         onRoomAccessDenied: ClientEventMap[SocketClientEvents.RoomAccessDenied];

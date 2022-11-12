@@ -218,12 +218,14 @@
                                     is-square
                                     variant="danger"
                                     title="Reject User"
+                                    @click="store.denyAccessToRoom(client.id)"
                                 >
                                     <XIcon class="h-4 w-4" />
                                 </Button>
                                 <Button
                                     is-square
                                     variant="dark"
+                                    @click="store.grantAccessToRoom(client.id)"
                                     title="Accept user"
                                 >
                                     <CheckIcon class="h-4 w-4" />

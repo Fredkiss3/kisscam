@@ -514,7 +514,7 @@ export default async function (
                 .where('socketId')
                 .is.equalTo(clientSocketId)
                 .and('isOnline')
-                .is.equalTo(true)
+                .is.true()
                 .return.first();
 
             if (initiatorClient === null) {
@@ -545,10 +545,8 @@ export default async function (
                 .is.equalTo(initiatorClient.roomId!)
                 .and('uid')
                 .is.equalTo(toClientId)
-                .and('isOnline')
-                .is.equalTo(false)
                 .and('isPending')
-                .is.equalTo(true)
+                .is.true()
                 .return.first();
 
             if (targetClient === null) {
@@ -561,6 +559,11 @@ export default async function (
             // update client status
             targetClient.isPending = false;
             await clientRepository.save(targetClient);
+
+            // send response to user
+            console.log(
+                `Room access granted for targetClient :${targetClient.name} (with ID: ${targetClient.uid}) for room : ${initiatorClient.roomId}`
+            );
 
             // send response to user
             serverSocket
@@ -580,7 +583,7 @@ export default async function (
                 .where('socketId')
                 .is.equalTo(clientSocketId)
                 .and('isOnline')
-                .is.equalTo(true)
+                .is.true()
                 .return.first();
 
             if (initiatorClient === null) {
@@ -611,28 +614,25 @@ export default async function (
                 .is.equalTo(initiatorClient.roomId!)
                 .and('uid')
                 .is.equalTo(toClientId)
-                .and('isOnline')
-                .is.equalTo(false)
                 .and('isPending')
-                .is.equalTo(true)
+                .is.true()
                 .return.first();
 
             if (targetClient === null) {
                 console.log(
-                    `Cannot grant access to room because the target user is not connected.`
+                    `Cannot deny access to room because the target user is not connected.`
                 );
                 return;
             }
 
-            // remove client from room
-            await clientRepository.remove(targetClient.entityId);
-
-            // send response to user
             serverSocket
                 .to(targetClient.socketId!)
                 .emit(SocketClientEvents.RoomAccessDenied, {
                     roomId: initiatorClient.roomId!,
                 });
+
+            // remove client from room
+            await clientRepository.remove(targetClient.entityId);
         };
 
     const onRemoveRoomAccess: ServerEventMap[SocketServerEvents.RemoveRoomAccess] =
@@ -650,7 +650,7 @@ export default async function (
 
             if (initiatorClient === null) {
                 console.log(
-                    `Cannot deny access to room because the initiator user is not connected.`
+                    `Cannot remove access to room because the initiator user is not connected.`
                 );
                 return;
             }
@@ -664,7 +664,7 @@ export default async function (
 
             if (room?.hostUid !== initiatorClient.uid) {
                 console.log(
-                    `Cannot deny access to room because the initiator user is not the creator of the room.`
+                    `Cannot remove access to room because the initiator user is not the creator of the room.`
                 );
                 return;
             }
@@ -680,7 +680,7 @@ export default async function (
 
             if (targetClient === null) {
                 console.log(
-                    `Cannot grant access to room because the target user is not connected.`
+                    `Cannot remove access to room because the target user is not connected.`
                 );
                 return;
             }
@@ -719,7 +719,7 @@ export default async function (
                 .where('socketId')
                 .is.equalTo(clientSocketId)
                 .and('isOnline')
-                .is.equalTo(true)
+                .is.true()
                 .return.first();
 
             if (initiatorClient === null) {
