@@ -16,7 +16,12 @@
             class="absolute inset-0 p-4 flex flex-col justify-between items-center"
         >
             <div class="flex justify-end w-full">
-                <Button variant="dark" is-square v-if="isHost">
+                <Button
+                    variant="dark"
+                    is-square
+                    v-if="isHost"
+                    class="cursor-default"
+                >
                     <HomeIcon class="h-4 text-white" />
                 </Button>
             </div>
@@ -99,8 +104,6 @@ const classes = computed(() => {
                 true,
             'border-2 border-primary': props.talking,
             [props.class]: true,
-            'h-[200px] w-[250px]': props.minimized,
-            'w-[450px]': props.fixedWidth,
         },
         img: {
             'rounded-full bg-dark': true,

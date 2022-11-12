@@ -19,6 +19,31 @@ export default async function (
     const { clientRepository, roomRepository, redisClient } =
         await getRepositories();
 
+    async function createClient(data: {
+        uid: string;
+        name: string;
+        socketId: string | null;
+        roomId: string;
+        embbeddedClientUid?: string;
+        isHost: boolean;
+        isEmbed: boolean;
+        isOnline: boolean;
+        isPending: boolean;
+    }) {
+        // Add user to pending queue
+        const newClient = clientRepository.createEntity();
+        newClient.uid = data.uid;
+        newClient.name = data.name;
+        newClient.roomId = data.roomId;
+        newClient.isHost = data.isHost;
+        newClient.socketId = clientSocket.id;
+        newClient.isOnline = data.isOnline;
+        newClient.isPending = data.isPending;
+        newClient.embbeddedClientUid = data.embbeddedClientUid ?? null;
+        await clientRepository.save(newClient);
+        return newClient;
+    }
+
     const onCreateRoom: ServerEventMap[SocketServerEvents.CreateRoom] =
         async function ({
             roomName,
@@ -112,13 +137,32 @@ export default async function (
                 return;
             }
 
+            // verify is already pending
+            const pendingClient = await clientRepository
+                .search()
+                .where('roomId')
+                .is.equalTo(roomId)
+                .and('uid')
+                .is.equalTo(user.id!)
+                .and('isPending')
+                .is.true()
+                .return.first();
+
+            if (pendingClient !== null) {
+                // instruct user to wait again
+                clientSocket.emit(SocketClientEvents.RoomAccessPending, {
+                    roomId,
+                });
+                return;
+            }
+
             // get all the clients in the room
             const clientsInRoom = await clientRepository
                 .search()
                 .where('roomId')
                 .is.equalTo(roomId)
-                .and('pending')
-                .is.equalTo(false)
+                .and('isPending')
+                .is.not.true()
                 .return.all();
 
             const host = await clientRepository
@@ -146,14 +190,15 @@ export default async function (
                 }
 
                 // Add user to pending queue
-                const newClient = await clientRepository.createAndSave({
+                const newClient = await createClient({
                     uid: user.id,
                     name: clientName,
                     roomId,
-                    isHost: embedClientUid === room.hostUid, // can embed self
+                    isHost: false,
                     socketId: clientSocket.id,
+                    isPending: true,
                     isOnline: false,
-                    pending: true,
+                    isEmbed: false,
                 });
 
                 // The client should expire after 24 hours
@@ -221,23 +266,39 @@ export default async function (
                 .is.equalTo(userId)
                 .where('roomId')
                 .is.equalTo(roomId)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(false)
                 .return.first();
 
             if (client === null) {
+                console.log(`Creates the client ??`);
                 // create the client if the client not in the Room
-                client = await clientRepository.createAndSave({
+                client = await createClient({
                     uid: userId,
                     name: clientName,
                     roomId,
-                    isHost: embedClientUid === room.hostUid, // can embed self
-                    embbeddedClientUid: embedClientUid ?? null,
-                    isEmbed: !!asEmbed,
+                    isHost:
+                        embedClientUid === room.hostUid ||
+                        user.id === room.hostUid, // can embed self
+                    embbeddedClientUid: embedClientUid,
                     socketId: clientSocketId,
                     isOnline: true,
-                    pending: false,
+                    isPending: false,
+                    isEmbed: !!asEmbed,
                 });
+                // client = await clientRepository.createAndSave({
+                //     uid: userId,
+                //     name: clientName,
+                //     roomId,
+                //     isHost:
+                //         embedClientUid === room.hostUid ||
+                //         user.id === room.hostUid, // can embed self
+                //     embbeddedClientUid: embedClientUid ?? null,
+                //     isEmbed: !!asEmbed,
+                //     socketId: clientSocketId,
+                //     isOnline: true,
+                //     isPending: false,
+                // });
 
                 // The client should expire after 24 hours
                 await redisClient.execute([
@@ -246,10 +307,14 @@ export default async function (
                     86_400,
                 ]);
             } else {
+                console.log(`Updates the client ??`);
                 // updates the client status & socket
                 client.isOnline = true;
                 client.socketId = clientSocketId;
                 client.name = clientName;
+                client.isHost = user.id === room.hostUid;
+                client.isEmbed = !!asEmbed;
+
                 await clientRepository.save(client);
             }
 
@@ -262,7 +327,7 @@ export default async function (
                 .is.not.equalTo(userId)
                 .and('isOnline')
                 .is.equalTo(true)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(false)
                 .return.all();
 
@@ -276,7 +341,7 @@ export default async function (
                 clients: clients.map((client) => ({
                     clientUid: client.uid!,
                     clientName: client.name!,
-                    isHost: !!client.isHost,
+                    isHost: client.uid === room.hostUid,
                     isEmbed: client.isEmbed,
                 })),
             });
@@ -287,6 +352,26 @@ export default async function (
                 clientName,
                 isEmbed: !!asEmbed,
             });
+
+            if (room.hostUid === clientUid && host?.socketId) {
+                // inform the host of all pending clients
+                const pendingClients = await clientRepository
+                    .search()
+                    .where('roomId')
+                    .is.equalTo(roomId)
+                    .and('isPending')
+                    .is.equalTo(true)
+                    .return.all();
+
+                for (const client of pendingClients) {
+                    // Send request to owner
+                    serverSocket
+                        .to(host.socketId)
+                        .emit(SocketClientEvents.RoomAccessRequired, {
+                            clientId: client.uid!,
+                        });
+                }
+            }
 
             console.log(
                 `${clientName} joined room the room : ${room.name} (${roomId})`
@@ -327,7 +412,7 @@ export default async function (
                 .is.equalTo(toClientId)
                 .and('isOnline')
                 .is.equalTo(true)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(false)
                 .return.first();
 
@@ -379,7 +464,7 @@ export default async function (
                 .is.equalTo(toClientId)
                 .and('isOnline')
                 .is.equalTo(true)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(false)
                 .return.first();
 
@@ -415,7 +500,7 @@ export default async function (
                 .is.equalTo(clientSocketId)
                 .and('isOnline')
                 .is.equalTo(true)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(false)
                 .return.first();
 
@@ -495,7 +580,7 @@ export default async function (
                 .is.equalTo(toClientId)
                 .and('isOnline')
                 .is.equalTo(false)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(true)
                 .return.first();
 
@@ -507,7 +592,7 @@ export default async function (
             }
 
             // update client status
-            targetClient.pending = false;
+            targetClient.isPending = false;
             await clientRepository.save(targetClient);
 
             // send response to user
@@ -561,7 +646,7 @@ export default async function (
                 .is.equalTo(toClientId)
                 .and('isOnline')
                 .is.equalTo(false)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(true)
                 .return.first();
 
@@ -700,7 +785,7 @@ export default async function (
                 .is.equalTo(toClientId)
                 .and('isOnline')
                 .is.equalTo(false)
-                .and('pending')
+                .and('isPending')
                 .is.equalTo(false)
                 .return.first();
 
@@ -736,7 +821,7 @@ export default async function (
             return;
         }
 
-        if (!client.pending) {
+        if (!client.isPending) {
             // Update the client status as offline
             client.isOnline = false;
             client.socketId = null;

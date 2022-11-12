@@ -11,9 +11,9 @@
         v-if="!isLoading"
         :class="[
             route.name !== 'call-room' && route.name !== 'podcast-room'
-                ? 'h-[80vh]'
+                ? 'h-[80vh] p-8'
                 : 'h-screen',
-            'flex flex-col items-center justify-center gap-4 p-8',
+            'flex flex-col items-center justify-center gap-4',
         ]"
     >
         <div
@@ -22,7 +22,13 @@
         <router-view></router-view>
     </main>
 
-    <Footer v-if="!isLoading" />
+    <Footer
+        v-if="
+            !isLoading &&
+            route.name !== 'call-room' &&
+            route.name !== 'podcast-room'
+        "
+    />
 
     <div
         v-if="isLoading"

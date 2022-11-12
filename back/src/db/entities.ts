@@ -6,12 +6,12 @@ export class Client extends Entity {
     name?: string;
     socketId?: string | null;
     roomId?: string;
-    embbeddedClientUid?: string;
+    embbeddedClientUid?: string | null;
 
-    isHost = false;
-    isEmbed = false;
-    isOnline = false;
-    pending = false;
+    isHost?: boolean;
+    isEmbed?: boolean;
+    isOnline?: boolean;
+    isPending?: boolean;
 
     constructor(schema: Schema<any>, id: string, data?: EntityData) {
         super(schema, id, data);
@@ -41,7 +41,7 @@ const clientSchema = new Schema(Client, {
     roomId: {
         type: 'string',
     },
-    pending: {
+    isPending: {
         type: 'boolean',
     },
     embbeddedClientUid: {

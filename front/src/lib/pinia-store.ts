@@ -59,6 +59,22 @@ export const usePiniaStore = defineStore<
                     )
                     .on(SocketClientEvents.RoomJoined, this.onRoomJoined)
                     .on(
+                        SocketClientEvents.RoomAccessPending,
+                        this.onRoomAccessPending
+                    )
+                    .on(
+                        SocketClientEvents.RoomAccessRequired,
+                        this.onRoomAccessRequired
+                    )
+                    .on(
+                        SocketClientEvents.RoomAccessDenied,
+                        this.onRoomAccessDenied
+                    )
+                    .on(
+                        SocketClientEvents.RoomAccessGranted,
+                        this.onRoomAccessGranted
+                    )
+                    .on(
                         SocketClientEvents.RoomCreationRefused,
                         this.onRoomCreationRefused
                     );
@@ -129,7 +145,7 @@ export const usePiniaStore = defineStore<
         },
 
         onRoomAccessPending() {
-            // this.currentStep = 'ROOM_ACCESS_DENIED';
+            this.currentStep = 'ROOM_ACCESS_PENDING';
             // this.room.id = null;
         },
 

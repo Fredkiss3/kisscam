@@ -1,9 +1,11 @@
 <template>
     <div :class="classes">
-        <RssIcon class="-scale-x-100 text-danger h-6" />
+        <div class="h-full self-stretch">
+            <RssIcon class="-scale-x-100 text-danger h-6" />
+        </div>
         <div class="flex flex-col">
             <h1 class="font-bold text-lg" v-if="variant === 'detailled'">
-                You are in {{ store.room.name }} room
+                You are in room: "{{ store.room.name }}"
             </h1>
             <h1 class="font-bold text-lg" v-else>
                 {{ store.room.name }}
@@ -124,7 +126,7 @@ async function copyRoomLinkToClipboard() {
 const classes = computed(() => {
     return {
         'border-secondary/50 bg-darker border p-3 rounded-2xl': true,
-        'flex items-stretch gap-4': true,
+        'flex items-center gap-4': true,
         [props.class]: true,
     };
 });

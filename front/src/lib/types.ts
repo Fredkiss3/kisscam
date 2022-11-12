@@ -23,6 +23,7 @@ export type Room = {
     name?: string;
     podTitle?: string;
     twitchHostName?: string;
+    hostUid: string | null;
     clients: Record<
         string,
         {
