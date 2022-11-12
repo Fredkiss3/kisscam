@@ -80,6 +80,7 @@ export interface ClientEventMap {
         roomName: string;
         twitchHostName?: string;
         podTitle?: string;
+        hostUid: string;
         clients: {
             clientUid: string;
             clientName: string;

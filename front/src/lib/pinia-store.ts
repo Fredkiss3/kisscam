@@ -26,6 +26,7 @@ export const usePiniaStore = defineStore<
             user: null,
             room: {
                 id: null,
+                hostUid: null,
                 clients: {},
             },
             peers: {},
@@ -43,6 +44,27 @@ export const usePiniaStore = defineStore<
         },
     },
     actions: {
+        initSocket() {
+            if (!this.socket) {
+                this.socket = io(`//${import.meta.env.VITE_WS_URL}/`, {
+                    transports: ['websocket'],
+                })
+                    .on('connect', () => {
+                        console.log('connected');
+                    })
+                    .on(SocketClientEvents.RoomCreated, this.onRoomCreated)
+                    .on(
+                        SocketClientEvents.RoomAccessDenied,
+                        this.onRoomAccessDenied
+                    )
+                    .on(SocketClientEvents.RoomJoined, this.onRoomJoined)
+                    .on(
+                        SocketClientEvents.RoomCreationRefused,
+                        this.onRoomCreationRefused
+                    );
+            }
+        },
+
         setStream(stream: MediaStream) {
             this.preferences.stream = stream;
         },
@@ -85,27 +107,6 @@ export const usePiniaStore = defineStore<
             }
         },
 
-        initSocket() {
-            if (!this.socket) {
-                this.socket = io(`//${import.meta.env.VITE_WS_URL}/`, {
-                    transports: ['websocket'],
-                })
-                    .on('connect', () => {
-                        console.log('connected');
-                    })
-                    .on(SocketClientEvents.RoomCreated, this.onRoomCreated)
-                    .on(
-                        SocketClientEvents.RoomAccessDenied,
-                        this.onRoomAccessDenied
-                    )
-                    .on(SocketClientEvents.RoomJoined, this.onRoomJoined)
-                    .on(
-                        SocketClientEvents.RoomCreationRefused,
-                        this.onRoomCreationRefused
-                    );
-            }
-        },
-
         onRoomCreated({ roomId, roomName, podTitle, twitchHostName }) {
             console.log(`Room Created : ${roomId} => ${roomName}`);
 
@@ -127,12 +128,34 @@ export const usePiniaStore = defineStore<
             this.room.id = null;
         },
 
-        onRoomJoined({ clients, roomId, roomName, podTitle, twitchHostName }) {
+        onRoomAccessPending() {
+            // this.currentStep = 'ROOM_ACCESS_DENIED';
+            // this.room.id = null;
+        },
+
+        onRoomAccessRequired() {
+            // this.currentStep = 'ROOM_CREATION_REFUSED';
+            // this.room.id = null;
+        },
+        onRoomAccessGranted() {
+            // this.currentStep = 'ROOM_CREATION_REFUSED';
+            // this.room.id = null;
+        },
+
+        onRoomJoined({
+            clients,
+            roomId,
+            roomName,
+            podTitle,
+            twitchHostName,
+            hostUid,
+        }) {
             this.currentStep = 'ROOM_JOINED';
             this.room.id = roomId;
             this.room.name = roomName;
             this.room.podTitle = podTitle;
             this.room.twitchHostName = twitchHostName;
+            this.room.hostUid = hostUid;
 
             const listClients: Record<
                 string,
