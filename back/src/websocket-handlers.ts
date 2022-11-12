@@ -146,7 +146,7 @@ export default async function (
                 }
 
                 // Add user to pending queue
-                await clientRepository.createAndSave({
+                const newClient = await clientRepository.createAndSave({
                     uid: user.id,
                     name: clientName,
                     roomId,
@@ -155,6 +155,13 @@ export default async function (
                     isOnline: false,
                     pending: true,
                 });
+
+                // The client should expire after 24 hours
+                await redisClient.execute([
+                    'EXPIRE',
+                    `Client:${newClient.entityId}`,
+                    86_400,
+                ]);
 
                 // instruct user to wait
                 clientSocket.emit(SocketClientEvents.RoomAccessPending, {
@@ -231,6 +238,13 @@ export default async function (
                     isOnline: true,
                     pending: false,
                 });
+
+                // The client should expire after 24 hours
+                await redisClient.execute([
+                    'EXPIRE',
+                    `Client:${client.entityId}`,
+                    86_400,
+                ]);
             } else {
                 // updates the client status & socket
                 client.isOnline = true;
@@ -256,6 +270,7 @@ export default async function (
             clientSocket.emit(SocketClientEvents.RoomJoined, {
                 roomId,
                 roomName: room.name!,
+                hostUid: room.hostUid!,
                 twitchHostName: room.twitchHostName,
                 podTitle: room.podTitle,
                 clients: clients.map((client) => ({
