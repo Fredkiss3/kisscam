@@ -13,9 +13,9 @@
 
             <small class="text-secondary" v-if="variant === 'detailled'">
                 {{
-                    Object.keys(store.room.clients).length > 0
+                    Object.keys(store.connectedClients).length > 0
                         ? `${
-                              Object.keys(store.room.clients).length
+                              Object.keys(store.connectedClients).length
                           } together with you`
                         : 'No one is here but you'
                 }}

@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { io } from 'socket.io-client';
 import { SocketClientEvents, SocketServerEvents } from '@kisscam/shared';
 
-import type { PiniaStore, AuthUser, UserPrefs } from './types';
+import type { PiniaStore, AuthUser, UserPrefs, Room } from './types';
 import { randomInt } from './functions';
 
 export const usePiniaStore = defineStore<
@@ -12,6 +12,12 @@ export const usePiniaStore = defineStore<
     PiniaStore['state'],
     {
         hasVideo: (state?: PiniaStore['state']) => boolean;
+        connectedClients: (
+            state?: PiniaStore['state']
+        ) => Array<Room['clients'][string] & { id: string }>;
+        pendingClients: (
+            state?: PiniaStore['state']
+        ) => Array<Room['clients'][string] & { id: string }>;
     },
     PiniaStore['actions']
 >('store', {
@@ -41,6 +47,30 @@ export const usePiniaStore = defineStore<
                     ?.getTracks()
                     .find((track) => track?.kind === 'video') !== undefined
             );
+        },
+        connectedClients(state?: PiniaStore['state']) {
+            return state === undefined
+                ? []
+                : Object.entries(state.room.clients)
+                      .filter(([_, client]) => {
+                          return !client.isEmbed && !client.isPending;
+                      })
+                      .map(([id, client]) => ({
+                          id,
+                          ...client,
+                      }));
+        },
+        pendingClients(state?: PiniaStore['state']) {
+            return state === undefined
+                ? []
+                : Object.entries(state.room.clients)
+                      .filter(([_, client]) => {
+                          return !client.isEmbed && client.isPending;
+                      })
+                      .map(([id, client]) => ({
+                          id,
+                          ...client,
+                      }));
         },
     },
     actions: {
@@ -77,6 +107,16 @@ export const usePiniaStore = defineStore<
                     .on(
                         SocketClientEvents.RoomCreationRefused,
                         this.onRoomCreationRefused
+                    )
+                    .on(
+                        SocketClientEvents.NewClient,
+                        ({ clientId, clientName, isEmbed }) => {
+                            // TODO...
+                        }
+                    )
+                    .on(
+                        SocketClientEvents.ClientDisconnected,
+                        this.onClientDisconnected
                     );
             }
         },
@@ -92,6 +132,7 @@ export const usePiniaStore = defineStore<
                     stream: null,
                     podTitle,
                     username,
+                    peepNo: randomInt(1, 105),
                     twitchUserName: twitchHostName,
                     videoActivated: this.preferences?.videoActivated ?? true,
                     audioActivated: this.preferences?.audioActivated ?? true,
@@ -139,6 +180,19 @@ export const usePiniaStore = defineStore<
             this.room.id = null;
         },
 
+        onClientDisconnected({ clientId }) {
+            const { [clientId]: client, ...otherClients } = this.room.clients;
+
+            this.room.clients = otherClients;
+
+            // close peer connection
+            const peer = this.peers[clientId];
+            if (peer) {
+                peer.connection.close();
+                delete this.peers[clientId];
+            }
+        },
+
         onRoomCreationRefused() {
             this.currentStep = 'ROOM_CREATION_REFUSED';
             this.room.id = null;
@@ -146,16 +200,26 @@ export const usePiniaStore = defineStore<
 
         onRoomAccessPending() {
             this.currentStep = 'ROOM_ACCESS_PENDING';
-            // this.room.id = null;
         },
 
-        onRoomAccessRequired() {
-            // this.currentStep = 'ROOM_CREATION_REFUSED';
-            // this.room.id = null;
+        onRoomAccessRequired({ clientId, clientName }) {
+            if (!this.room.clients[clientId]) {
+                this.room.clients[clientId] = {
+                    clientName,
+                    isPending: true,
+                    isEmbed: false,
+                    peepNo: randomInt(1, 105),
+                };
+            }
         },
         onRoomAccessGranted() {
-            // this.currentStep = 'ROOM_CREATION_REFUSED';
-            // this.room.id = null;
+            if (this.room.id) {
+                this.currentStep = 'JOINING_ROOM';
+                this.joinRoom({
+                    id: this.room.id,
+                    username: this.preferences.username!,
+                });
+            }
         },
 
         onRoomJoined({
@@ -180,17 +244,21 @@ export const usePiniaStore = defineStore<
                     peepNo: number;
                     isHost?: boolean;
                     isEmbed: boolean;
+                    isPending: boolean;
                 }
             > = {};
 
-            clients.forEach(({ clientUid, clientName, isHost, isEmbed }) => {
-                listClients[clientUid] = {
-                    clientName,
-                    peepNo: randomInt(1, 10),
-                    isHost,
-                    isEmbed: !!isEmbed,
-                };
-            });
+            clients.forEach(
+                ({ clientUid, clientName, isHost, isEmbed, isPending }) => {
+                    listClients[clientUid] = {
+                        clientName,
+                        peepNo: randomInt(1, 105),
+                        isHost,
+                        isEmbed: !!isEmbed,
+                        isPending,
+                    };
+                }
+            );
 
             this.room.clients = listClients;
         },

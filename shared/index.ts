@@ -36,6 +36,7 @@ export interface ClientEventMap {
 
     [SocketClientEvents.RoomAccessRequired]: (arg: {
         clientId: string;
+        clientName: string;
     }) => void;
 
     [SocketClientEvents.RoomAccessRemoved]: (arg: { roomId: string }) => void;
@@ -86,6 +87,7 @@ export interface ClientEventMap {
             clientName: string;
             isHost: boolean;
             isEmbed?: boolean;
+            isPending: boolean;
         }[];
     }) => void;
 

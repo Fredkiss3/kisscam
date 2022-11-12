@@ -39,7 +39,7 @@
                 />
 
                 <VideoCard
-                    v-for="client in clients"
+                    v-for="client in store.connectedClients"
                     :key="client.id"
                     :name="client.clientName"
                     :client-id="client.id"
@@ -96,7 +96,7 @@
 
 <script setup lang="ts">
 // utils & functions
-import { computed, onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import { randomInt } from '../lib/functions';
 import { useStore } from '../lib/pinia-store';
 
@@ -112,17 +112,6 @@ import Sidebar from '../components/Sidebar.vue';
 const router = useRouter();
 const route = useRoute();
 const store = useStore();
-
-const clients = computed(() => {
-    return Object.entries(store.room.clients)
-        .filter(([_, client]) => {
-            return !client.isEmbed;
-        })
-        .map(([id, client]) => ({
-            id,
-            ...client,
-        }));
-});
 
 onMounted(async () => {
     if (!store.preferences.username) {

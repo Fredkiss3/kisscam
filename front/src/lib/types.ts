@@ -33,6 +33,7 @@ export type Room = {
             videoActivated?: boolean;
             audioActivated?: boolean;
             isEmbed: boolean;
+            isPending: boolean;
         }
     >;
 };
@@ -112,6 +113,7 @@ export type Profile = {
 export type UserPrefs = {
     stream: MediaStream | null;
     username: string;
+    peepNo: number;
     podTitle: string | undefined;
     twitchUserName: string | undefined;
     videoActivated: boolean;
@@ -154,6 +156,7 @@ export type PiniaStore = {
         onRoomAccessRequired: ClientEventMap[SocketClientEvents.RoomAccessRequired];
         onRoomCreationRefused: ClientEventMap[SocketClientEvents.RoomCreationRefused];
         onRoomJoined: ClientEventMap[SocketClientEvents.RoomJoined];
+        onClientDisconnected: ClientEventMap[SocketClientEvents.ClientDisconnected];
     };
     //
     // peers: Record<string, Peer>; // clientId: Peer

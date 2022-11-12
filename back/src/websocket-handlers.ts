@@ -197,7 +197,7 @@ export default async function (
                     isHost: false,
                     socketId: clientSocket.id,
                     isPending: true,
-                    isOnline: false,
+                    isOnline: true,
                     isEmbed: false,
                 });
 
@@ -218,6 +218,7 @@ export default async function (
                     .to(host!.socketId!)
                     .emit(SocketClientEvents.RoomAccessRequired, {
                         clientId: clientUid,
+                        clientName,
                     });
                 return;
             }
@@ -286,19 +287,6 @@ export default async function (
                     isPending: false,
                     isEmbed: !!asEmbed,
                 });
-                // client = await clientRepository.createAndSave({
-                //     uid: userId,
-                //     name: clientName,
-                //     roomId,
-                //     isHost:
-                //         embedClientUid === room.hostUid ||
-                //         user.id === room.hostUid, // can embed self
-                //     embbeddedClientUid: embedClientUid ?? null,
-                //     isEmbed: !!asEmbed,
-                //     socketId: clientSocketId,
-                //     isOnline: true,
-                //     isPending: false,
-                // });
 
                 // The client should expire after 24 hours
                 await redisClient.execute([
@@ -326,9 +314,7 @@ export default async function (
                 .where('uid')
                 .is.not.equalTo(userId)
                 .and('isOnline')
-                .is.equalTo(true)
-                .and('isPending')
-                .is.equalTo(false)
+                .is.true()
                 .return.all();
 
             // send the room data to the client
@@ -343,6 +329,7 @@ export default async function (
                     clientName: client.name!,
                     isHost: client.uid === room.hostUid,
                     isEmbed: client.isEmbed,
+                    isPending: client.isPending!,
                 })),
             });
 
@@ -352,26 +339,6 @@ export default async function (
                 clientName,
                 isEmbed: !!asEmbed,
             });
-
-            if (room.hostUid === clientUid && host?.socketId) {
-                // inform the host of all pending clients
-                const pendingClients = await clientRepository
-                    .search()
-                    .where('roomId')
-                    .is.equalTo(roomId)
-                    .and('isPending')
-                    .is.equalTo(true)
-                    .return.all();
-
-                for (const client of pendingClients) {
-                    // Send request to owner
-                    serverSocket
-                        .to(host.socketId)
-                        .emit(SocketClientEvents.RoomAccessRequired, {
-                            clientId: client.uid!,
-                        });
-                }
-            }
 
             console.log(
                 `${clientName} joined room the room : ${room.name} (${roomId})`

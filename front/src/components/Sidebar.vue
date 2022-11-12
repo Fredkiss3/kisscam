@@ -8,20 +8,15 @@
     >
         <div class="h-full bg-hollow flex flex-col pb-4 w-full">
             <div class="sticky top-0">
-                <Menu
-                    v-if="user"
-                    class="w-full"
-                    use-squared-button
-                    size="small"
-                >
+                <Menu class="w-full" use-squared-button size="small">
                     <template v-slot:content>
                         <div class="flex items-center gap-2">
                             <img
-                                :src="user.user_metadata.avatar_url"
+                                :src="user?.user_metadata.avatar_url"
                                 alt="user's avatar"
                                 class="h-8 w-8 object-contain object-center rounded-full"
                             />
-                            <span>{{ user.user_metadata.name }}</span>
+                            <span>{{ user?.user_metadata.name }}</span>
 
                             <ChevronDownIcon
                                 class="ml-2 -mr-1 h-5 w-5 text-violet-200 hover:text-violet-100"
@@ -72,24 +67,47 @@
                         <span>In room</span>
                         <div class="opacity-50 flex gap-1 items-center">
                             <div><UsersIcon class="h-4 w-4" /></div>
-                            <span>3</span>
+                            <span>{{ store.connectedClients.length + 1 }}</span>
                         </div>
                     </div>
 
                     <ul class="pl-4 pr-2">
+                        <li class="flex items-center gap-2 py-2">
+                            <div class="bg-dark rounded-full">
+                                <img
+                                    :src="`/Bust/peep-${
+                                        store.preferences.peepNo ?? 1
+                                    }.png`"
+                                    alt="profile photo"
+                                    class="h-6 w-6 object-cover rounded-full"
+                                />
+                            </div>
+                            <small class="font-semibold">{{
+                                store.preferences.username
+                            }}</small>
+
+                            <small class="text-secondary font-bold"
+                                >(You)</small
+                            >
+                        </li>
+
                         <li
                             class="flex items-center gap-2 py-2 justify-between"
-                            v-for="i in Array.from({ length: 3 })"
+                            v-for="client in store.connectedClients"
                         >
                             <div class="flex items-center gap-2">
                                 <div class="bg-dark rounded-full">
                                     <img
-                                        src="/Bust/peep-4.png"
+                                        :src="`/Bust/peep-${
+                                            store.preferences.peepNo ?? 1
+                                        }.png`"
                                         alt="profile photo"
                                         class="h-6 w-6 object-cover rounded-full"
                                     />
                                 </div>
-                                <small class="font-semibold">Fredkisss</small>
+                                <small class="font-semibold">{{
+                                    client.clientName
+                                }}</small>
                             </div>
                             <div class="flex items-center gap-2">
                                 <Menu
@@ -174,13 +192,13 @@
                         <span> Waiting list</span>
                         <div class="opacity-50 flex gap-1 items-center">
                             <div><UsersIcon class="h-4 w-4" /></div>
-                            <span>2</span>
+                            <span>{{ store.pendingClients.length }}</span>
                         </div>
                     </div>
                     <ul class="pl-4 pr-2">
                         <li
                             class="flex items-center gap-2 py-2 justify-between"
-                            v-for="i in Array.from({ length: 2 })"
+                            v-for="client in store.pendingClients"
                         >
                             <div class="flex items-center gap-2">
                                 <div class="bg-dark rounded-full">
@@ -190,7 +208,9 @@
                                         class="h-6 w-6 object-cover rounded-full"
                                     />
                                 </div>
-                                <small class="font-semibold">Fredkisss</small>
+                                <small class="font-semibold">{{
+                                    client.clientName
+                                }}</small>
                             </div>
 
                             <div class="flex gap-2 items-center">
@@ -234,6 +254,7 @@ import {
 import Button from './Button.vue';
 import { DotsHorizontalIcon } from '@heroicons/vue/outline';
 import MutedMicIcon from './MutedMicIcon.vue';
+import { useStore } from '../lib/pinia-store';
 
 interface Props {
     class?: string;
@@ -244,6 +265,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { data: user } = useUserQuery();
+const store = useStore();
+
 const logoutMutation = useLogoutMutation();
 async function logout() {
     await logoutMutation.mutateAsync();
