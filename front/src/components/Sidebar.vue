@@ -155,6 +155,11 @@
                                                             : 'text-white',
                                                         'group flex w-full items-center rounded-md px-2 py-2 text-sm gap-2',
                                                     ]"
+                                                    @click="
+                                                        store.removeAccessToRoom(
+                                                            client.id
+                                                        )
+                                                    "
                                                 >
                                                     <BanIcon class="h-4" />
                                                     Kick User

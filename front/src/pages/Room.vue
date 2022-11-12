@@ -71,6 +71,20 @@
     </div>
 
     <div
+        v-else-if="store.currentStep === 'ROOM_ACCESS_REMOVED'"
+        class="flex flex-col gap-2 items-center justify-center h-screen w-full"
+    >
+        <h2 class="font-semibold text-2xl">ROOM ACCESS REMOVED</h2>
+
+        <p>The owner removed your access to the room.</p>
+
+        <router-link to="/" class="flex gap-2 items-center underline">
+            <ArrowLeftIcon class="h-4" />
+            Go Home
+        </router-link>
+    </div>
+
+    <div
         v-else-if="store.currentStep === 'ROOM_ACCESS_PENDING'"
         class="flex flex-col gap-2 items-center justify-center h-screen w-full"
     >

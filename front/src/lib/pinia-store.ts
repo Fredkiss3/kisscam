@@ -104,6 +104,10 @@ export const usePiniaStore = defineStore<
                         this.onRoomAccessDenied
                     )
                     .on(
+                        SocketClientEvents.RoomAccessRemoved,
+                        this.onRoomAccessRemoved
+                    )
+                    .on(
                         SocketClientEvents.RoomAccessGranted,
                         this.onRoomAccessGranted
                     )
@@ -204,6 +208,23 @@ export const usePiniaStore = defineStore<
             this.room.clients = otherClients;
         },
 
+        removeAccessToRoom(toClientId) {
+            this.socket?.emit(SocketServerEvents.RemoveRoomAccess, {
+                toClientId,
+            });
+
+            const { [toClientId]: client, ...otherClients } = this.room.clients;
+
+            this.room.clients = otherClients;
+
+            // close peer connection
+            const peer = this.peers[toClientId];
+            if (peer) {
+                peer.connection.close();
+                delete this.peers[toClientId];
+            }
+        },
+
         /*******************************/
         /*********  EVENTS  ************/
         /*******************************/
@@ -220,6 +241,12 @@ export const usePiniaStore = defineStore<
 
         onRoomAccessDenied() {
             this.currentStep = 'ROOM_ACCESS_DENIED';
+            this.room.id = null;
+        },
+
+        onRoomAccessRemoved() {
+            this.leaveRoom();
+            this.currentStep = 'ROOM_ACCESS_REMOVED';
             this.room.id = null;
         },
 

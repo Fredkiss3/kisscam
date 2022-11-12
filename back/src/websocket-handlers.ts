@@ -645,7 +645,7 @@ export default async function (
                 .where('socketId')
                 .is.equalTo(clientSocketId)
                 .and('isOnline')
-                .is.equalTo(true)
+                .is.true()
                 .return.first();
 
             if (initiatorClient === null) {

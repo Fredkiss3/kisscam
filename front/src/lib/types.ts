@@ -51,6 +51,7 @@ export type StoreState =
     | 'ROOM_CREATED'
     | 'ROOM_CREATION_REFUSED'
     | 'ROOM_ACCESS_DENIED'
+    | 'ROOM_ACCESS_REMOVED'
     | 'ROOM_ACCESS_PENDING'
     | 'JOINING_ROOM'
     | 'ROOM_JOINED'
@@ -150,6 +151,7 @@ export type PiniaStore = {
         setStream: (stream: MediaStream) => void;
         grantAccessToRoom: (toClientId: string) => void;
         denyAccessToRoom: (toClientId: string) => void;
+        removeAccessToRoom: (toClientId: string) => void;
         // events
         onRoomCreated: ClientEventMap[SocketClientEvents.RoomCreated];
         onRoomAccessDenied: ClientEventMap[SocketClientEvents.RoomAccessDenied];
@@ -157,6 +159,7 @@ export type PiniaStore = {
         onRoomAccessGranted: ClientEventMap[SocketClientEvents.RoomAccessGranted];
         onRoomAccessRequired: ClientEventMap[SocketClientEvents.RoomAccessRequired];
         onRoomCreationRefused: ClientEventMap[SocketClientEvents.RoomCreationRefused];
+        onRoomAccessRemoved: ClientEventMap[SocketClientEvents.RoomAccessRemoved];
         onRoomJoined: ClientEventMap[SocketClientEvents.RoomJoined];
         onClientDisconnected: ClientEventMap[SocketClientEvents.ClientDisconnected];
     };
