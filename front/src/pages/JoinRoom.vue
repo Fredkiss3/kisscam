@@ -42,7 +42,7 @@ import Input from '../components/Input.vue';
 import Button from '../components/Button.vue';
 import { ArrowLeftIcon } from '@heroicons/vue/outline';
 
-import { useStore } from '../lib/store';
+import { useStore } from '../lib/pinia-store';
 import { reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -55,7 +55,7 @@ const qs = new URLSearchParams(window.location.search);
 
 const data = reactive({
     id: qs.get('roomId') || '',
-    username: store.user.name,
+    username: store.preferences.username ?? '',
     errorOnID: null as string | null,
 });
 
@@ -72,7 +72,8 @@ function handleSubmit() {
     const roomIDRegex = /^([a-z0-9]{10})$/;
 
     if (roomIDRegex.test(data.id)) {
-        store.updateUserName({ username: data.username });
+        store.preferences.username = data.username;
+        store.saveUserPreferences();
         router.push({
             name: 'call-room',
             params: {

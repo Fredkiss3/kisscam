@@ -1,9 +1,11 @@
 <template>
     <div :class="classes">
-        <RssIcon class="-scale-x-100 text-danger h-6" />
+        <div class="h-full self-stretch">
+            <RssIcon class="-scale-x-100 text-danger h-6" />
+        </div>
         <div class="flex flex-col">
             <h1 class="font-bold text-lg" v-if="variant === 'detailled'">
-                You are in {{ store.room.name }} room
+                You are in room: "{{ store.room.name }}"
             </h1>
             <h1 class="font-bold text-lg" v-else>
                 {{ store.room.name }}
@@ -11,9 +13,9 @@
 
             <small class="text-secondary" v-if="variant === 'detailled'">
                 {{
-                    Object.keys(store.room.clients).length > 0
+                    Object.keys(store.connectedClients).length > 0
                         ? `${
-                              Object.keys(store.room.clients).length
+                              Object.keys(store.connectedClients).length
                           } together with you`
                         : 'No one is here but you'
                 }}
@@ -27,34 +29,38 @@
             <Button
                 variant="hollow"
                 class="p-3"
-                square
+                is-square
                 :title="
-                    store.user.audioActivated
+                    store.preferences.audioActivated
                         ? 'Mute yourself'
                         : 'Unmute yourself'
                 "
                 @click="store.toggleAudio()"
             >
-                <MicIcon v-if="store.user.audioActivated" class="h-6" />
+                <MicIcon v-if="store.preferences.audioActivated" class="h-6" />
                 <MutedMicIcon
-                    v-if="!store.user.audioActivated"
+                    v-if="!store.preferences.audioActivated"
                     class="h-6 text-secondary"
                 />
             </Button>
             <Button
                 variant="hollow"
                 class="p-3"
-                square
+                :disabled="!store.hasVideo"
+                is-square
                 :title="
-                    store.user.videoActivated
+                    store.preferences.videoActivated
                         ? 'Disable your camera'
                         : 'Enable your camera'
                 "
                 @click="store.toggleVideo()"
             >
-                <CameraIcon v-if="store.user.videoActivated" class="h-6" />
+                <CameraIcon
+                    v-if="store.preferences.videoActivated"
+                    class="h-6"
+                />
                 <CameraOffIcon
-                    v-if="!store.user.videoActivated"
+                    v-if="!store.preferences.videoActivated"
                     class="h-6 text-secondary"
                 />
             </Button>
@@ -65,7 +71,7 @@
                 title="Share your room link"
                 variant="primary"
                 class="p-3"
-                square
+                is-square
                 @click="copyRoomLinkToClipboard"
                 v-if="variant === 'detailled'"
             >
@@ -87,7 +93,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useStore } from '../lib/store';
+import { useStore } from '../lib/pinia-store';
 import { LogoutIcon } from '@heroicons/vue/outline';
 
 import RssIcon from './RssIcon.vue';
@@ -120,7 +126,7 @@ async function copyRoomLinkToClipboard() {
 const classes = computed(() => {
     return {
         'border-secondary/50 bg-darker border p-3 rounded-2xl': true,
-        'flex items-stretch gap-4': true,
+        'flex items-center gap-4': true,
         [props.class]: true,
     };
 });

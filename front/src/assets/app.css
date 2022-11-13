@@ -2,10 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    @apply bg-darkest;
-    font-family: Avenir, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    color: white;
+@layer base {
+    body {
+        @apply bg-darkest;
+        font-family: Avenir, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        color: white;
+    }
+
+    /* html, */
+    body {
+        min-height: 100vh;
+    }
+
+    #app {
+        height: 100%;
+    }
+}
+
+@layer components {
+    .v-popper__inner {
+        background: #fff;
+        color: black;
+        padding: 0.3rem;
+        border-radius: theme('borderRadius.md');
+        font-weight: 600;
+        box-shadow: 0 6px 30px #100a1f;
+    }
+
+    .v-popper__arrow-inner {
+        visibility: visible;
+        border-color: #100a1f;
+    }
+
+    .v-popper__arrow-outer {
+        border-color: #ddd;
+    }
+
+    /* Transition */
+
+    .v-popper__popper--hidden {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.15s, visibility 0.15s;
+    }
+
+    .v-popper__popper--shown {
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 0.15s;
+    }
+
+    .v-popper__popper--skip-transition {
+        transition: none !important;
+    }
 }

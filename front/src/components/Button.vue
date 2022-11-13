@@ -1,14 +1,23 @@
 <template>
-    <button
-        :class="classes"
-        :type="type"
-        @click="emit('click')"
-        :title="title"
-        :disabled="disabled || loading"
+    <VTooltip
+        :disabled="!title"
+        class="rounded-md font-bold text-white flex gap-2 items-center justify-center"
     >
-        <slot />
-        <Loader v-if="loading" class="!mr-0 !ml-0" />
-    </button>
+        <button
+            :class="classes"
+            :type="type"
+            @click="emit('click')"
+            :title="title"
+            :disabled="disabled || loading"
+        >
+            <slot />
+            <Loader v-if="loading" class="!mr-0 !ml-0" />
+        </button>
+
+        <template #popper>
+            <span>{{ title }}</span>
+        </template>
+    </VTooltip>
 </template>
 
 <script setup lang="ts">
@@ -21,7 +30,7 @@ interface Props {
     type?: 'button' | 'submit';
     title?: string;
     disabled?: boolean;
-    square?: boolean;
+    isSquare?: boolean;
     loading?: boolean;
 }
 
@@ -46,10 +55,9 @@ const classes = computed(() => {
         'bg-dark': props.variant === 'dark',
         'bg-purple-500': props.variant === 'purple',
         'bg-secondary cursor-not-allowed': !!props.disabled || props.loading,
-        'p-2': props.square,
-        'py-2 px-4': !props.square,
-        'rounded-md font-bold text-white flex gap-2 items-center justify-center':
-            true,
+        'p-2': props.isSquare,
+        'py-2 px-4': !props.isSquare,
+        'rounded-md flex gap-2 items-center': true,
         [props.class]: true,
     };
 });

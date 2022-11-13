@@ -4,22 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { jsonFetch, wait } from './functions';
 import { loadStripe } from '@stripe/stripe-js';
 
-import type {
-    Session as SupabaseSession,
-    User as SupabaseUser,
-} from '@supabase/supabase-js';
+import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { ref } from 'vue';
-
-export type Profile = {
-    created_at: string;
-    id: string;
-    stripe_customer_id: string;
-    subscription_end_at: string | null;
-    subscribed_at: string | null;
-    access_token: string;
-};
-
-export type User = SupabaseUser & Profile;
+import { AuthUser } from './types';
 
 export const showFooter = ref(true);
 
@@ -44,14 +31,9 @@ export function useLogoutMutation() {
 }
 
 export function useUserQuery() {
-    return useQuery<User | null>(
+    return useQuery<AuthUser | null>(
         ['session'],
         async () => {
-            // @ts-ignore
-            if (import.meta.env.MODE !== 'development') {
-                await wait(1500);
-            }
-
             const {
                 data: { session },
                 error,
@@ -88,7 +70,7 @@ export function useUserQuery() {
 
 export function useCheckoutSessionMutation() {
     const queryClient = useQueryClient();
-    const user = queryClient.getQueryData<User>(['session']);
+    const user = queryClient.getQueryData<AuthUser>(['session']);
 
     return useMutation(async () => {
         const stripe = await loadStripe(
@@ -125,7 +107,7 @@ export function useCheckoutSessionMutation() {
 export function usePortalSessionMutation() {
     const queryClient = useQueryClient();
 
-    const user = queryClient.getQueryData<User>(['session']);
+    const user = queryClient.getQueryData<AuthUser>(['session']);
 
     return useMutation(async () => {
         if (user) {

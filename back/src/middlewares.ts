@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { supabase } from './lib/supabase-server';
+import { supabaseClient } from './lib/supabase-server';
 
 export async function isAuthed(
     req: FastifyRequest<{
@@ -14,14 +14,7 @@ export async function isAuthed(
     const {
         data: { user },
         error,
-    } = await supabase.auth.getUser(jwt);
-
-    console.log({
-        parts,
-        jwt,
-        user,
-        error,
-    });
+    } = await supabaseClient.auth.getUser(jwt);
 
     if (error !== null || user === null) {
         return res.status(401).send({

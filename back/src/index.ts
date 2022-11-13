@@ -18,7 +18,7 @@ import {
     ClientEventMap,
 } from '@kisscam/shared';
 import { initClient } from './lib/redis';
-import handlers from './handlers';
+import handlers from './websocket-handlers';
 import {
     createBillingPortalSession,
     createCheckoutSession,
@@ -58,12 +58,33 @@ server.ready().then(() => {
                     onJoinRoom,
                     onOffer,
                     onCandidate,
+                    onDenyRoomAccess,
+                    onGrantRoomAccess,
+                    onMuteParticipant,
+                    onRemoveRoomAccess,
                 }) => {
                     socket.on(SocketServerEvents.CreateRoom, onCreateRoom);
                     socket.on(SocketServerEvents.JoinRoom, onJoinRoom);
                     socket.on(SocketServerEvents.SendOffer, onOffer);
                     socket.on(SocketServerEvents.SendAnswer, onAnswer);
                     socket.on(SocketServerEvents.SendCandidate, onCandidate);
+                    socket.on(
+                        SocketServerEvents.GrantRoomAccess,
+                        onGrantRoomAccess
+                    );
+                    socket.on(
+                        SocketServerEvents.DenyRoomAccess,
+                        onDenyRoomAccess
+                    );
+                    socket.on(
+                        SocketServerEvents.MuteParticipant,
+                        onMuteParticipant
+                    );
+                    socket.on(
+                        SocketServerEvents.RemoveRoomAccess,
+                        onRemoveRoomAccess
+                    );
+                    socket.on(SocketServerEvents.LeaveRoom, onDisconnect);
 
                     socket.on(`disconnect`, onDisconnect);
                 }

@@ -11,7 +11,9 @@ const router = useRouter();
 
 watchEffect(() => {
     if (!isLoading.value) {
-        if (!user.value?.subscribed_at) {
+        const expDate = new Date(user.value?.subscription_end_at!);
+        const today = new Date();
+        if (expDate < today) {
             router.replace({
                 name: 'dashboard',
             });

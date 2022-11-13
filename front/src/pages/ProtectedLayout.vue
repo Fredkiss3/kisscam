@@ -1,9 +1,20 @@
 <template>
-    <Header v-if="!isLoading" />
+    <Header
+        v-if="
+            !isLoading &&
+            route.name !== 'call-room' &&
+            route.name !== 'podcast-room'
+        "
+    />
 
     <main
         v-if="!isLoading"
-        class="h-[80vh] flex flex-col items-center justify-center gap-4 p-8"
+        :class="[
+            route.name !== 'call-room' && route.name !== 'podcast-room'
+                ? 'h-[80vh] p-8'
+                : 'h-screen',
+            'flex flex-col items-center justify-center gap-4',
+        ]"
     >
         <div
             class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-44 w-44 rounded-full bg-purple-500 blur-[200px] z-[-1]"
@@ -11,7 +22,13 @@
         <router-view></router-view>
     </main>
 
-    <Footer v-if="!isLoading" />
+    <Footer
+        v-if="
+            !isLoading &&
+            route.name !== 'call-room' &&
+            route.name !== 'podcast-room'
+        "
+    />
 
     <div
         v-if="isLoading"
@@ -27,13 +44,14 @@ import Header from '../components/Header.vue';
 import Loader from '../components/Loader.vue';
 
 import { onUnmounted, ref, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserQuery } from '../lib/composables';
 import { supabase } from '../lib/supabase-client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const { isLoading, data: user } = useUserQuery();
 const router = useRouter();
+const route = useRoute();
 const supabaseSubscription = ref<RealtimeChannel | null>(null);
 
 watchEffect(() => {
