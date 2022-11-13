@@ -35,7 +35,7 @@ jobs:
           image_name: kisscam-api
           image_tag: latest
           push_git_tag: true
-          build_extra_args: "--build-arg=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --build-arg=SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          build_extra_args: "--build-arg=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --build-arg=SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} --build-arg=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} --build-arg=STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }} --build-arg=STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }} --build-arg=STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }} --build-arg=STRIPE_SUBSCRIPTION_ID=${{ secrets.STRIPE_SUBSCRIPTION_ID }} --build-arg=PAYMENT_REDIRECT_HOST=${{ secrets.PAYMENT_REDIRECT_HOST }}"
           registry: dcr.fredkiss.dev
           dockerfile: Dockerfile.api
           context: .
