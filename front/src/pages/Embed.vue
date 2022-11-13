@@ -39,9 +39,7 @@
 
             <div
                 class="flex gap-2 items-center w-full absolute left-4 bottom-4"
-                v-if="
-                    client && showUI && client.stream && client.videoActivated
-                "
+                v-if="client && showUI && client.stream"
             >
                 <Tag class="!px-2 !py-2">
                     <MicIcon
@@ -65,9 +63,10 @@ import Tag from '../components/Tag.vue';
 import MutedMicIcon from '../components/MutedMicIcon.vue';
 import MicIcon from '../components/MicIcon.vue';
 
-import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
-import { useStore } from '../lib/store';
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
+import { useStore } from '../lib/pinia-store';
 import { useRoute } from 'vue-router';
+import Button from '../components/Button.vue';
 
 const qs = new URLSearchParams(window.location.search);
 const showUI = ref(!!qs.get('showUI'));
@@ -90,12 +89,13 @@ const classes = computed(() => {
 const store = useStore();
 
 const client = computed(() => {
-    const filteredClient = store.room.clients[store.user.idToFilter!];
+    const filteredClient =
+        store.room.clients[store.preferences.embbededClientUid!];
 
     return filteredClient
         ? {
               ...filteredClient,
-              stream: store.peers[store.user.idToFilter!]?.stream,
+              stream: store.peers[store.preferences.embbededClientUid!]?.stream,
           }
         : null;
 });
@@ -110,14 +110,29 @@ watchEffect(async () => {
     }
 });
 
-onMounted(async () => {
-    store.joinRoom({
-        id: route.params.roomId as string,
-        username: `embed-${route.params.roomId}`,
-        embed: true,
-        filter: route.params.filterId as string,
-    });
-});
+watch(
+    () => store.isSocketReady,
+    () => {
+        if (store.isSocketReady) {
+            joinRoom();
+        }
+    }
+);
+
+function joinRoom() {
+    const userId = qs.get('userID');
+    const embeddedUserId = qs.get('embeddedUserID');
+
+    if (userId !== null && embeddedUserId !== null) {
+        store.joinRoom({
+            id: route.params.roomId as string,
+            username: `embed-${route.params.roomId}`,
+            isEmbed: true,
+            userId,
+            embbededClientUid: embeddedUserId,
+        });
+    }
+}
 
 onUnmounted(() => {
     store.leaveRoom();

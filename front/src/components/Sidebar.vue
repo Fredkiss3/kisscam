@@ -114,6 +114,7 @@
                                     class="w-full"
                                     use-square-button
                                     size="medium"
+                                    alignment="right"
                                 >
                                     <template v-slot:content>
                                         <DotsHorizontalIcon class="h-4" />
@@ -129,6 +130,11 @@
                                                             : 'text-white',
                                                         'group flex w-full items-center rounded-md px-2 py-2 text-sm gap-2',
                                                     ]"
+                                                    @click="
+                                                        copyEmbedLinkToClipboard(
+                                                            client.id
+                                                        )
+                                                    "
                                                 >
                                                     <LinkIcon class="h-4" />
                                                     Copy embed
@@ -142,6 +148,12 @@
                                                             : 'text-white',
                                                         'group flex w-full items-center rounded-md px-2 py-2 text-sm gap-2',
                                                     ]"
+                                                    @click="
+                                                        copyEmbedLinkToClipboard(
+                                                            client.id,
+                                                            true
+                                                        )
+                                                    "
                                                 >
                                                     <LinkIcon class="h-4" />
                                                     Copy embed (with UI)
@@ -175,6 +187,11 @@
                                                             : 'text-white',
                                                         'group flex w-full items-center rounded-md px-2 py-2 text-sm gap-2',
                                                     ]"
+                                                    @click="
+                                                        store.muteUser(
+                                                            client.id
+                                                        )
+                                                    "
                                                 >
                                                     <MutedMicIcon
                                                         class="text-danger h-4"
@@ -262,6 +279,7 @@ import Button from './Button.vue';
 import { DotsHorizontalIcon } from '@heroicons/vue/outline';
 import MutedMicIcon from './MutedMicIcon.vue';
 import { useStore } from '../lib/pinia-store';
+import { useRoute } from 'vue-router';
 
 interface Props {
     class?: string;
@@ -277,5 +295,23 @@ const store = useStore();
 const logoutMutation = useLogoutMutation();
 async function logout() {
     await logoutMutation.mutateAsync();
+}
+
+function isHost() {
+    return store.room.hostUid === store.user?.id;
+}
+const route = useRoute();
+
+async function copyEmbedLinkToClipboard(id: string, withUI?: boolean) {
+    const embedLink = `${window.location.origin}/embed/${route.params.roomId}/`;
+
+    // construct query string for embed
+    const qs = new URLSearchParams();
+    qs.set('showUI', withUI ? 'true' : '');
+    qs.set('userID', store.user!.id);
+    qs.set('embeddedUserID', id);
+
+    await navigator.clipboard.writeText(`${embedLink}?${qs.toString()}`);
+    alert('The embed link has been copied to your clipboard');
 }
 </script>

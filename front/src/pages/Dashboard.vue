@@ -11,7 +11,7 @@
 
             <template v-slot:default> Invite people to your room </template>
         </Card>
-
+        <!-- 
         <Card href="/create-room/podcast">
             <template v-slot:header>
                 <span>Create a podcast Room </span>
@@ -19,7 +19,7 @@
             </template>
 
             <template v-slot:default> Integrated with twitch </template>
-        </Card>
+        </Card> -->
 
         <Card href="/join/room">
             <template v-slot:header>

@@ -15,6 +15,7 @@
         <div class="col-span-2 h-full" v-if="isHost()">
             <Sidebar />
         </div>
+
         <div
             :class="[
                 isHost() ? 'col-span-8 ' : 'col-span-10',
@@ -36,6 +37,8 @@
                     :is-host="isHost()"
                     :muted="true"
                     :video-activated="store.preferences?.videoActivated"
+                    :can-copy-embed="isHost()"
+                    @copy-embed="copyEmbedLinkToClipboard(store.user!.id)"
                 />
 
                 <VideoCard
@@ -50,6 +53,7 @@
                     :video-activated="
                         store.room.clients[client.id].videoActivated
                     "
+                    :can-copy-embed="isHost()"
                     @copy-embed="copyEmbedLinkToClipboard(client.id)"
                 />
             </div>
@@ -193,8 +197,14 @@ function isHost() {
 }
 
 async function copyEmbedLinkToClipboard(id: string) {
-    const embedLink = `${window.location.origin}/embed/${route.params.roomId}/${id}`;
-    await navigator.clipboard.writeText(embedLink);
+    const embedLink = `${window.location.origin}/embed/${route.params.roomId}/`;
+
+    // construct query string for embed
+    const qs = new URLSearchParams();
+    qs.set('userID', store.user!.id);
+    qs.set('embeddedUserID', id);
+
+    await navigator.clipboard.writeText(`${embedLink}?${qs.toString()}`);
     alert('The embed link has been copied to your clipboard');
 }
 

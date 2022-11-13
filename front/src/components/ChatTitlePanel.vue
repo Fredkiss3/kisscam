@@ -8,10 +8,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useStore } from '../lib/store';
 import { ChatIcon } from '@heroicons/vue/solid';
-
-const store = useStore();
 
 interface Props {
     class?: string;

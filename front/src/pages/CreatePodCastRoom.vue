@@ -53,7 +53,7 @@ import Button from '../components/Button.vue';
 
 import { ArrowLeftIcon } from '@heroicons/vue/outline';
 import { reactive, watch } from 'vue';
-import { useStore } from '../lib/store';
+import { useStore } from '../lib/pinia-store';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
@@ -75,10 +75,10 @@ watch(
 );
 
 const data = reactive({
-    username: store.user.name ?? '',
+    username: store.preferences.username ?? '',
     roomName: '',
-    twitchHostName: store.user.twitchUserName ?? '',
-    podTitle: store.user.podTitle ?? '',
+    twitchHostName: store.preferences.twitchUserName ?? '',
+    podTitle: store.preferences.podTitle ?? '',
 });
 
 function createRoom(datas: typeof data) {

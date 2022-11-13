@@ -119,6 +119,8 @@ export type UserPrefs = {
     twitchUserName: string | undefined;
     videoActivated: boolean;
     audioActivated: boolean;
+    embbededClientUid?: string;
+    embedInitiatorClientUid?: string;
 };
 
 export type AuthUser = SupabaseUser & Profile;
@@ -131,6 +133,7 @@ export type PiniaStore = {
         currentStep: StoreState;
         room: Room;
         peers: Record<string, Peer>; // clientId: Peer
+        isSocketReady: boolean;
     };
     actions: {
         createRoom(args: {
@@ -142,6 +145,7 @@ export type PiniaStore = {
         joinRoom(args: {
             id: string;
             username: string;
+            userId?: string;
             isEmbed?: boolean;
             embbededClientUid?: string;
         }): Promise<void>;
@@ -152,6 +156,7 @@ export type PiniaStore = {
         grantAccessToRoom: (toClientId: string) => void;
         denyAccessToRoom: (toClientId: string) => void;
         removeAccessToRoom: (toClientId: string) => void;
+        muteUser: (clientId: string) => void;
         toggleVideo: () => Promise<void>;
         toggleAudio: () => Promise<void>;
         syncStream: (args: {
@@ -163,6 +168,7 @@ export type PiniaStore = {
         }) => void;
         // events
         onRoomCreated: ClientEventMap[SocketClientEvents.RoomCreated];
+        onRoomNotFound: ClientEventMap[SocketClientEvents.RoomNotFound];
         onRoomAccessDenied: ClientEventMap[SocketClientEvents.RoomAccessDenied];
         onRoomAccessPending: ClientEventMap[SocketClientEvents.RoomAccessPending];
         onRoomAccessGranted: ClientEventMap[SocketClientEvents.RoomAccessGranted];
@@ -175,18 +181,7 @@ export type PiniaStore = {
         onNewCandidate: ClientEventMap[SocketClientEvents.NewCandidate];
         onNewAnswer: ClientEventMap[SocketClientEvents.NewAnswer];
         onNewOffer: ClientEventMap[SocketClientEvents.NewOffer];
+        onMuteAudio: ClientEventMap[SocketClientEvents.MuteAudio];
+        onSocketInitializationFinished: ClientEventMap[SocketClientEvents.SocketInitializationFinished];
     };
-    //
-    // peers: Record<string, Peer>; // clientId: Peer
-    // updateUserName: (args: { username: string }) => void;
-    // leaveRoom: () => void;
-    // toggleVideo: () => Promise<void>;
-    // toggleAudio: () => Promise<void>;
-    // syncStream: (args: {
-    //     clientId: string;
-    //     state: {
-    //         videoActivated?: boolean;
-    //         audioActivated?: boolean;
-    //     };
-    // }) => void;
 };
