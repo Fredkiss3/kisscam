@@ -44,7 +44,7 @@
                     variant="hollow"
                     is-square
                     @click="emit('copyEmbed')"
-                    v-if="!isMe"
+                    v-if="canCopyEmbed"
                 >
                     <LinkIcon class="text-white h-4" />
                 </Button>
@@ -77,6 +77,7 @@ interface Props {
     videoActivated?: boolean;
     fixedWidth?: boolean;
     isHost?: boolean;
+    canCopyEmbed?: boolean;
 }
 
 interface Events {
@@ -92,6 +93,7 @@ const props = withDefaults(defineProps<Props>(), {
     isMe: false,
     isHost: false,
     videoActivated: false,
+    canCopyEmbed: false,
     fixedWidth: true,
 });
 

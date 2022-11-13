@@ -26,10 +26,13 @@ export enum SocketClientEvents {
 
     // muted by owner
     MuteAudio = 'client:mute-audio',
+    // Socket Connection Ready
+    SocketInitializationFinished = 'client:init-socket-finished',
 }
 
 export interface ClientEventMap {
     [SocketClientEvents.RoomCreationRefused]: () => void;
+    [SocketClientEvents.SocketInitializationFinished]: () => void;
     [SocketClientEvents.RoomAccessDenied]: (arg: { roomId: string }) => void;
     [SocketClientEvents.RoomAccessPending]: (arg: { roomId: string }) => void;
     [SocketClientEvents.RoomAccessGranted]: (arg: { roomId: string }) => void;

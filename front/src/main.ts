@@ -10,9 +10,9 @@ import Home from './pages/Dashboard.vue';
 import Room from './pages/Room.vue';
 import JoinRoom from './pages/JoinRoom.vue';
 import CreateRoom from './pages/CreateRoom.vue';
-import CreatePodCastRoom from './pages/CreatePodCastRoom.vue';
-import PodCastRoom from './pages/PodCastRoom.vue';
-import JoinPodRoom from './pages/JoinPodRoom.vue';
+// import CreatePodCastRoom from './pages/CreatePodCastRoom.vue';
+// import PodCastRoom from './pages/PodCastRoom.vue';
+// import JoinPodRoom from './pages/JoinPodRoom.vue';
 import NotFound from './pages/NotFound.vue';
 import Embed from './pages/Embed.vue';
 import Login from './pages/Login.vue';
@@ -47,11 +47,11 @@ const routes: RouteRecordRaw[] = [
                 component: Room,
             },
 
-            {
-                path: '/pod/:roomId([a-z0-9]{10})',
-                name: 'podcast-room',
-                component: PodCastRoom,
-            },
+            // {
+            //     path: '/pod/:roomId([a-z0-9]{10})',
+            //     name: 'podcast-room',
+            //     component: PodCastRoom,
+            // },
 
             {
                 path: 'payment',
@@ -77,11 +77,11 @@ const routes: RouteRecordRaw[] = [
                         name: 'join-call-room',
                         component: JoinRoom,
                     },
-                    {
-                        path: 'pod-room',
-                        name: 'join-pod-room',
-                        component: JoinPodRoom,
-                    },
+                    // {
+                    //     path: 'pod-room',
+                    //     name: 'join-pod-room',
+                    //     component: JoinPodRoom,
+                    // },
                 ],
             },
             {
@@ -93,11 +93,11 @@ const routes: RouteRecordRaw[] = [
                         name: 'create-call-room',
                         component: CreateRoom,
                     },
-                    {
-                        path: 'podcast',
-                        name: 'create-podcast-room',
-                        component: CreatePodCastRoom,
-                    },
+                    // {
+                    //     path: 'podcast',
+                    //     name: 'create-podcast-room',
+                    //     component: CreatePodCastRoom,
+                    // },
                 ],
             },
         ],
@@ -117,7 +117,7 @@ const routes: RouteRecordRaw[] = [
     },
 
     {
-        path: '/embed/:roomId([a-z0-9]{10})/:filterId([A-Za-z0-9-_]+)',
+        path: '/embed/:roomId([a-z0-9]{10})/',
         name: 'embed',
         component: Embed,
     },

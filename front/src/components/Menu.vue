@@ -1,5 +1,5 @@
 <template>
-    <Menu as="div" :class="`relative inline-block text-left ${props.class}`">
+    <Menu as="div" :class="[`relative inline-block text-left`, props.class]">
         <div>
             <MenuButton
                 :class="[
@@ -29,7 +29,10 @@
                         : props.size === 'medium'
                         ? 'w-48'
                         : 'w-36',
-                    'z-20 absolute right-0 mt-2 origin-top-right divide-y divide-gray-100 rounded-md bg-hollow shadow-lg ring-1 ring-white text-white ring-opacity-40 focus:outline-none',
+                    props.alignment === 'left'
+                        ? 'right-0  origin-top-right'
+                        : 'left-0  origin-top-left',
+                    'z-20 absolute mt-2 divide-y divide-gray-100 rounded-md bg-hollow shadow-lg ring-1 ring-white text-white ring-opacity-40 focus:outline-none',
                 ]"
             >
                 <slot name="items" />
@@ -46,6 +49,7 @@ interface Props {
     useSharpEdges?: boolean;
     useSquareButton?: boolean;
     size?: 'small' | 'medium' | 'large';
+    alignment?: 'left' | 'right';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -53,5 +57,6 @@ const props = withDefaults(defineProps<Props>(), {
     useSharpEdges: false,
     useSquareButton: false,
     size: 'large',
+    alignment: 'left',
 });
 </script>

@@ -111,6 +111,15 @@ export default async function (
             asEmbed?: boolean;
             embedClientUid?: string;
         }) {
+            console.log(`client is trying to join the room :`, {
+                roomId,
+                clientUid,
+                clientName,
+                embedClientUid,
+                asEmbed,
+                socketId: clientSocket.id,
+            });
+
             // Check room existence
             const room = await roomRepository
                 .search()
@@ -119,6 +128,7 @@ export default async function (
                 .return.first();
 
             if (room === null) {
+                console.log(`Room not found`);
                 clientSocket.emit(SocketClientEvents.RoomNotFound);
                 return;
             }
@@ -150,6 +160,7 @@ export default async function (
 
             if (pendingClient !== null) {
                 // instruct user to wait again
+                console.log(`client is still waiting`);
                 clientSocket.emit(SocketClientEvents.RoomAccessPending, {
                     roomId,
                 });
@@ -227,6 +238,7 @@ export default async function (
             if (asEmbed) {
                 console.log(`user is embed ?`);
                 if (!embedClientUid) {
+                    console.log(`embbed client UId not provided`);
                     clientSocket.emit(SocketClientEvents.RoomAccessDenied, {
                         roomId,
                     });
@@ -268,7 +280,7 @@ export default async function (
                 .where('roomId')
                 .is.equalTo(roomId)
                 .and('isPending')
-                .is.equalTo(false)
+                .is.false()
                 .return.first();
 
             if (client === null) {
@@ -341,7 +353,7 @@ export default async function (
             });
 
             console.log(
-                `${clientName} joined room the room : ${room.name} (${roomId})`
+                `${clientName} joined room the room : "${room.name}" (${roomId})`
             );
             return;
         };
@@ -466,9 +478,9 @@ export default async function (
                 .where('socketId')
                 .is.equalTo(clientSocketId)
                 .and('isOnline')
-                .is.equalTo(true)
+                .is.true()
                 .and('isPending')
-                .is.equalTo(false)
+                .is.false()
                 .return.first();
 
             if (initiatorClient === null) {
@@ -724,7 +736,7 @@ export default async function (
 
             if (initiatorClient === null) {
                 console.log(
-                    `Cannot deny access to room because the initiator user is not connected.`
+                    `Cannot mute participant because the initiator user is not connected.`
                 );
                 return;
             }
@@ -738,27 +750,25 @@ export default async function (
 
             if (room?.hostUid !== initiatorClient.uid) {
                 console.log(
-                    `Cannot deny access to room because the initiator user is not the creator of the room.`
+                    `Cannot mute participant because the initiator user is not the creator of the room.`
                 );
                 return;
             }
 
-            // // the client we want to send the candidate
+            // the client we want to mute
             const targetClient = await clientRepository
                 .search()
                 .where('roomId')
                 .is.equalTo(initiatorClient.roomId!)
                 .and('uid')
                 .is.equalTo(toClientId)
-                .and('isOnline')
-                .is.equalTo(false)
                 .and('isPending')
-                .is.equalTo(false)
+                .is.false()
                 .return.first();
 
             if (targetClient === null) {
                 console.log(
-                    `Cannot grant access to room because the target user is not connected.`
+                    `Cannot mute participant because the target user is not connected.`
                 );
                 return;
             }
@@ -769,6 +779,10 @@ export default async function (
                 .emit(SocketClientEvents.MuteAudio, {
                     roomId: initiatorClient.roomId!,
                 });
+
+            console.log(
+                `User ${targetClient.name} has been muted by the host of the room.`
+            );
         };
 
     const onDisconnect = async function () {
@@ -783,7 +797,7 @@ export default async function (
 
         if (client === null) {
             console.log(
-                `Client '${clientSocketId}' disconnected but not in a room `
+                `Client with socket '${clientSocketId}' disconnected but not in a room `
             );
             return;
         }

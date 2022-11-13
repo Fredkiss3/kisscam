@@ -16,6 +16,7 @@ import {
     ServerEventMap,
     SocketServerEvents,
     ClientEventMap,
+    SocketClientEvents,
 } from '@kisscam/shared';
 import { initClient } from './lib/redis';
 import handlers from './websocket-handlers';
@@ -49,7 +50,8 @@ server.ready().then(() => {
     server.io.on(
         'connection',
         (socket: Socket<ServerEventMap, ClientEventMap>) => {
-            // @ts-ignore
+            console.log('new socket client:', socket.id);
+
             handlers(socket, server.io).then(
                 ({
                     onAnswer,
@@ -87,6 +89,12 @@ server.ready().then(() => {
                     socket.on(SocketServerEvents.LeaveRoom, onDisconnect);
 
                     socket.on(`disconnect`, onDisconnect);
+
+                    console.log('Socket initialization finished : ', socket.id);
+
+                    socket.emit(
+                        SocketClientEvents.SocketInitializationFinished
+                    );
                 }
             );
         }

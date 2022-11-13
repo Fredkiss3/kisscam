@@ -12,6 +12,7 @@ import {
     Room,
     isToggleMessageType,
 } from './types';
+import { useUserQuery } from './composables';
 
 export const usePiniaStore = defineStore<
     'store',
@@ -35,6 +36,7 @@ export const usePiniaStore = defineStore<
 
         return {
             socket: null,
+            isSocketReady: false,
             user: null,
             room: {
                 id: null,
@@ -50,7 +52,7 @@ export const usePiniaStore = defineStore<
         hasVideo(state?: PiniaStore['state']) {
             return (
                 state?.preferences.stream
-                    ?.getTracks()
+                    ?.getTracks?.()
                     .find((track) => track?.kind === 'video') !== undefined
             );
         },
@@ -85,13 +87,15 @@ export const usePiniaStore = defineStore<
         /*******************************/
         initSocket() {
             if (!this.socket) {
+                // @ts-ignore
                 this.socket = io(`//${import.meta.env.VITE_WS_URL}/`, {
                     transports: ['websocket'],
                 })
                     .on('connect', () => {
-                        console.log('connected');
+                        console.log('socket connected !!');
                     })
                     .on(SocketClientEvents.RoomCreated, this.onRoomCreated)
+                    .on(SocketClientEvents.RoomNotFound, this.onRoomNotFound)
                     .on(
                         SocketClientEvents.RoomAccessDenied,
                         this.onRoomAccessDenied
@@ -122,9 +126,14 @@ export const usePiniaStore = defineStore<
                         this.onRoomCreationRefused
                     )
                     .on(SocketClientEvents.NewClient, this.onNewClient)
+                    .on(
+                        SocketClientEvents.SocketInitializationFinished,
+                        this.onSocketInitializationFinished
+                    )
                     .on(SocketClientEvents.NewCandidate, this.onNewCandidate)
                     .on(SocketClientEvents.NewAnswer, this.onNewAnswer)
                     .on(SocketClientEvents.NewOffer, this.onNewOffer)
+                    .on(SocketClientEvents.MuteAudio, this.onMuteAudio)
                     .on(
                         SocketClientEvents.ClientDisconnected,
                         this.onClientDisconnected
@@ -269,17 +278,25 @@ export const usePiniaStore = defineStore<
             }
         },
 
-        async joinRoom({ id, username, isEmbed, embbededClientUid }) {
-            if (this.user) {
+        async joinRoom({ id, username, isEmbed, embbededClientUid, userId }) {
+            if (
+                this.isSocketReady &&
+                (this.user || (isEmbed && userId !== undefined))
+            ) {
                 this.currentStep = 'JOINING_ROOM';
                 this.preferences.username = username;
-                this.saveUserPreferences();
+                this.preferences.embbededClientUid = embbededClientUid;
+                this.preferences.embedInitiatorClientUid = userId;
+
+                if (!isEmbed) {
+                    this.saveUserPreferences();
+                }
 
                 this.socket?.emit(SocketServerEvents.JoinRoom, {
                     roomId: id,
                     clientName: this.preferences.username,
                     asEmbed: isEmbed,
-                    clientUid: this.user.id,
+                    clientUid: userId ?? this.user?.id!,
                     embedClientUid: embbededClientUid,
                 });
             }
@@ -306,19 +323,23 @@ export const usePiniaStore = defineStore<
         },
 
         grantAccessToRoom(toClientId) {
+            const { [toClientId]: client, ...otherClients } = this.room.clients;
+
+            this.room.clients = otherClients;
+
             this.socket?.emit(SocketServerEvents.GrantRoomAccess, {
                 toClientId,
             });
         },
 
         denyAccessToRoom(toClientId) {
-            this.socket?.emit(SocketServerEvents.DenyRoomAccess, {
-                toClientId,
-            });
-
             const { [toClientId]: client, ...otherClients } = this.room.clients;
 
             this.room.clients = otherClients;
+
+            this.socket?.emit(SocketServerEvents.DenyRoomAccess, {
+                toClientId,
+            });
         },
 
         removeAccessToRoom(toClientId) {
@@ -338,6 +359,12 @@ export const usePiniaStore = defineStore<
             }
         },
 
+        muteUser(clientId) {
+            this.socket?.emit(SocketServerEvents.MuteParticipant, {
+                toClientId: clientId,
+            });
+        },
+
         /*******************************/
         /*********  EVENTS  ************/
         /*******************************/
@@ -350,6 +377,11 @@ export const usePiniaStore = defineStore<
             this.room.twitchHostName = twitchHostName;
 
             this.currentStep = 'ROOM_CREATED';
+        },
+
+        onRoomNotFound() {
+            this.room.id = null;
+            this.currentStep = 'ROOM_NOT_FOUND';
         },
 
         onRoomAccessDenied() {
@@ -445,14 +477,106 @@ export const usePiniaStore = defineStore<
         },
 
         onNewClient({ clientUid, clientName, isEmbed }) {
+            if (
+                this.preferences.embedInitiatorClientUid !== undefined &&
+                this.preferences.embbededClientUid !== undefined
+            ) {
+                const clientInRoom = this.room.clients[clientUid];
+
+                if (
+                    !clientInRoom &&
+                    clientUid === this.preferences.embbededClientUid
+                ) {
+                    this.room.clients[clientUid] = {
+                        clientName,
+                        peepNo: randomInt(1, 105),
+                        isEmbed: !!isEmbed,
+                    };
+
+                    this.peers[clientUid] = {
+                        connection: createPeerConnection(),
+                        isInitiator: true,
+                        stream: new MediaStream(),
+                    };
+
+                    const { connection } = this.peers[clientUid];
+
+                    // connect only one way when embed
+                    connection.addTransceiver('audio', {
+                        direction: 'recvonly',
+                    });
+                    connection.addTransceiver('video', {
+                        direction: 'recvonly',
+                    });
+
+                    // Send candidates when there are ones
+                    connection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            this.socket?.emit(
+                                SocketServerEvents.SendCandidate,
+                                {
+                                    toClientId: clientUid,
+                                    iceCandidate: event.candidate,
+                                }
+                            );
+                        }
+                    };
+
+                    // Add remote stream to peer connection
+                    connection.ontrack = (event) => {
+                        console.log(
+                            `Received stream from peer "${clientUid}": `,
+                            event.streams[0],
+                            'client data => ',
+                            this.room.clients[clientUid]
+                        );
+
+                        this.peers[clientUid].stream = event.streams[0];
+                    };
+
+                    // create channel for sending data
+                    const channel = connection.createDataChannel(
+                        `events-${this.preferences.embedInitiatorClientUid}-${clientUid}`
+                    );
+
+                    // Listen for data channel messages
+                    channel.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            // If the message is a toggled video or audio state, update the client's stream
+                            if (isToggleMessageType(data)) {
+                                const { payload } = data;
+
+                                this.syncStream({
+                                    clientId: clientUid,
+                                    state: payload,
+                                });
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    };
+
+                    connection.onnegotiationneeded = async (ev) => {
+                        const sdp = await connection.createOffer({
+                            offerToReceiveAudio: true,
+                            offerToReceiveVideo: true,
+                        });
+                        await connection.setLocalDescription(sdp);
+                        this.socket?.emit(SocketServerEvents.SendOffer, {
+                            toClientId: clientUid,
+                            sdpOffer: connection.localDescription!,
+                        });
+                    };
+
+                    this.peers[clientUid].dataChannel = channel;
+                }
+            }
+
             if (this.user) {
                 const clientInRoom = this.room.clients[clientUid];
 
-                if (!clientInRoom && clientUid !== this.user.id && !isEmbed) {
-                    // if (this.user.isEmbed && clientId !== this.user.idToFilter) {
-                    //     return;
-                    // }
-
+                if (!clientInRoom && clientUid !== this.user.id) {
                     this.room.clients[clientUid] = {
                         clientName,
                         peepNo: randomInt(1, 105),
@@ -468,15 +592,6 @@ export const usePiniaStore = defineStore<
                     const stream = this.preferences.stream;
 
                     const { connection } = this.peers[clientUid];
-                    // connect only one way when embed
-                    // if (this.user.isEmbed) {
-                    //     connection.addTransceiver('audio', {
-                    //         direction: 'recvonly',
-                    //     });
-                    //     connection.addTransceiver('video', {
-                    //         direction: 'recvonly',
-                    //     });
-                    // }
 
                     if (stream) {
                         // Add local stream to peer connection only if not embed
@@ -549,40 +664,13 @@ export const usePiniaStore = defineStore<
                         }
                     };
 
-                    connection.onnegotiationneeded = (ev) => {
-                        // if (this.user.isEmbed) {
-                        //     connection
-                        //         .createOffer({
-                        //             offerToReceiveAudio: true,
-                        //             offerToReceiveVideo: true,
-                        //         })
-                        //         .then((sdp) =>
-                        //             connection.setLocalDescription(sdp)
-                        //         )
-                        //         .then(() => {
-                        //             this.socket?.emit(
-                        //                 SocketServerEvents.SendOffer,
-                        //                 {
-                        //                     toClientId: clientId,
-                        //                     sdpOffer:
-                        //                         connection.localDescription!,
-                        //                 }
-                        //             );
-                        //         });
-                        // } else {
-                        connection
-                            .createOffer()
-                            .then((sdp) => connection.setLocalDescription(sdp))
-                            .then(() => {
-                                this.socket?.emit(
-                                    SocketServerEvents.SendOffer,
-                                    {
-                                        toClientId: clientUid,
-                                        sdpOffer: connection.localDescription!,
-                                    }
-                                );
-                            });
-                        // }
+                    connection.onnegotiationneeded = async (ev) => {
+                        const sdp = await connection.createOffer();
+                        await connection.setLocalDescription(sdp);
+                        this.socket?.emit(SocketServerEvents.SendOffer, {
+                            toClientId: clientUid,
+                            sdpOffer: connection.localDescription!,
+                        });
                     };
 
                     this.peers[clientUid].dataChannel = channel;
@@ -600,13 +688,20 @@ export const usePiniaStore = defineStore<
             }
         },
 
-        onNewOffer({ fromClientId, sdpOffer }) {
+        async onNewOffer({ fromClientId, sdpOffer }) {
             const peer = this.peers[fromClientId];
 
             // Don't accept sdpOffer from not filtered client if embed
-            // if (this.user.isEmbed && fromClientId !== this.user.idToFilter) {
-            //     return;
-            // }
+            if (
+                this.preferences.embbededClientUid !== undefined &&
+                fromClientId !== this.preferences.embbededClientUid
+            ) {
+                return;
+            }
+
+            if (this.preferences.embbededClientUid) {
+                console.log('Embed Accepted offer from : ', fromClientId);
+            }
 
             if (peer) {
                 return;
@@ -621,18 +716,21 @@ export const usePiniaStore = defineStore<
                 const { connection } = this.peers[fromClientId];
 
                 // connect only one way when embed
-                // if (this.user.isEmbed) {
-                //     connection.addTransceiver('audio', {
-                //         direction: 'recvonly',
-                //     });
-                //     connection.addTransceiver('video', {
-                //         direction: 'recvonly',
-                //     });
-                // }
+                if (this.preferences.embbededClientUid) {
+                    connection.addTransceiver('audio', {
+                        direction: 'recvonly',
+                    });
+                    connection.addTransceiver('video', {
+                        direction: 'recvonly',
+                    });
+                }
 
                 const localStream = this.preferences.stream;
 
-                if (localStream) {
+                if (
+                    localStream &&
+                    this.preferences.embbededClientUid === undefined
+                ) {
                     // Add local stream to peer connection only if not embed
                     localStream
                         .getTracks()
@@ -661,16 +759,18 @@ export const usePiniaStore = defineStore<
 
                     channel.onopen = (event) => {
                         // Send the user's stream state to the new client
-                        channel.send(
-                            JSON.stringify({
-                                payload: {
-                                    videoActivated:
-                                        this.preferences.videoActivated,
-                                    audioActivated:
-                                        this.preferences.audioActivated,
-                                },
-                            })
-                        );
+                        if (!this.preferences.embbededClientUid) {
+                            channel.send(
+                                JSON.stringify({
+                                    payload: {
+                                        videoActivated:
+                                            this.preferences.videoActivated,
+                                        audioActivated:
+                                            this.preferences.audioActivated,
+                                    },
+                                })
+                            );
+                        }
                     };
 
                     // Listen for data channel messages
@@ -694,16 +794,23 @@ export const usePiniaStore = defineStore<
                     this.peers[fromClientId].dataChannel = channel;
                 };
 
-                connection
-                    .setRemoteDescription(sdpOffer as RTCSessionDescriptionInit)
-                    .then(() => connection.createAnswer())
-                    .then((sdp) => connection.setLocalDescription(sdp))
-                    .then(() => {
-                        this.socket?.emit(SocketServerEvents.SendAnswer, {
-                            toClientId: fromClientId,
-                            sdpAnswer: connection.localDescription!,
-                        });
-                    });
+                await connection.setRemoteDescription(
+                    sdpOffer as RTCSessionDescriptionInit
+                );
+
+                console.log('RemoteDescription Set');
+
+                const sdp = await connection.createAnswer();
+                console.log('New Answer created');
+
+                await connection.setLocalDescription(sdp);
+                console.log('LocalDescription Set');
+
+                this.socket?.emit(SocketServerEvents.SendAnswer, {
+                    toClientId: fromClientId,
+                    sdpAnswer: connection.localDescription!,
+                });
+                console.log('Answer Sent');
             }
         },
 
@@ -716,23 +823,36 @@ export const usePiniaStore = defineStore<
                 );
             }
         },
+
+        onSocketInitializationFinished() {
+            this.isSocketReady = true;
+        },
+
+        onMuteAudio() {
+            if (this.preferences.audioActivated) {
+                this.toggleAudio();
+            }
+        },
     },
 });
 
 export function useStore() {
     const store = usePiniaStore();
+    // initialize socket
+    store.initSocket();
+
     const queryClient = useQueryClient();
+    const { data } = useUserQuery();
     const observer = new QueryObserver<AuthUser>(queryClient, {
         queryKey: ['session'],
     });
 
     let unsubscribe: Function | null = null;
 
-    // initialize socket
-    store.initSocket();
+    store.user = data.value ?? null;
 
     onMounted(() => {
-        observer.subscribe((result) => {
+        unsubscribe = observer?.subscribe((result) => {
             store.user = result.data ?? null;
         });
     });

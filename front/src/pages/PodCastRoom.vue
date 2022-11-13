@@ -17,15 +17,13 @@
                 <VideoCard
                     name="You"
                     :is-me="true"
-                    :video-src="store.user.stream ?? null"
-                    :client-id="store.user.id!"
-                    :is-host="
-                        store.user.twitchUserName === store.room.twitchHostName
-                    "
+                    :video-src="store.preferences.stream ?? null"
+                    :client-id="store.user?.id!"
+                    :is-host="isHost()"
                     :peeps-no="randomInt(1, 105)"
                     :muted="true"
                     :fixedWidth="false"
-                    :video-activated="store.user.videoActivated"
+                    :video-activated="store.preferences.videoActivated"
                 />
 
                 <VideoCard
@@ -41,7 +39,7 @@
                     :name="client.clientName"
                     :client-id="client.id"
                     :peeps-no="client.peepNo"
-                    :is-host="client.isHost"
+                    :is-host="store.room.hostUid === client.id"
                     :video-src="store.peers[client.id]?.stream ?? null"
                     :muted="!store.room.clients[client.id].audioActivated"
                     :video-activated="
@@ -82,7 +80,7 @@ import ChatTitlePanel from '../components/ChatTitlePanel.vue';
 // utils & functions
 import { computed, onMounted, onUnmounted } from 'vue';
 import { randomInt } from '../lib/functions';
-import { useStore } from '../lib/store';
+import { useStore } from '../lib/pinia-store';
 import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -101,48 +99,52 @@ const clients = computed(() => {
         }));
 });
 
-onMounted(async () => {
-    if (!store.user.name) {
-        router.push({
-            name: 'join-pod-room',
-            query: {
-                roomId: route.params.roomId,
-            },
-        });
-        alert(`You must set a username before joining a room`);
-        return;
-    }
+// onMounted(async () => {
+//     if (!store.user.name) {
+//         router.push({
+//             name: 'join-pod-room',
+//             query: {
+//                 roomId: route.params.roomId,
+//             },
+//         });
+//         alert(`You must set a username before joining a room`);
+//         return;
+//     }
 
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-        });
+//     try {
+//         const stream = await navigator.mediaDevices.getUserMedia({
+//             video: true,
+//             audio: true,
+//         });
 
-        if (stream) {
-            store.user.stream = stream;
-            store.joinRoom({
-                id: route.params.roomId as string,
-                username: store.user.name,
-            });
-        } else {
-            alert(
-                'You must allow access to your camera and microphone to join a room'
-            );
-        }
-    } catch (error) {
-        console.error(error);
-        alert(
-            'You must allow access to your camera and microphone to join a room'
-        );
-        router.push({
-            name: 'join-pod-room',
-            query: {
-                roomId: route.params.roomId,
-            },
-        });
-    }
-});
+//         if (stream) {
+//             store.user.stream = stream;
+//             store.joinRoom({
+//                 id: route.params.roomId as string,
+//                 username: store.user.name,
+//             });
+//         } else {
+//             alert(
+//                 'You must allow access to your camera and microphone to join a room'
+//             );
+//         }
+//     } catch (error) {
+//         console.error(error);
+//         alert(
+//             'You must allow access to your camera and microphone to join a room'
+//         );
+//         router.push({
+//             name: 'join-pod-room',
+//             query: {
+//                 roomId: route.params.roomId,
+//             },
+//         });
+//     }
+// });
+
+function isHost() {
+    return store.room.hostUid === store.user?.id;
+}
 
 onUnmounted(() => {
     store.leaveRoom();
