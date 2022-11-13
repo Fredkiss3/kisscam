@@ -114,7 +114,7 @@
 
 <script setup lang="ts">
 // utils & functions
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { randomInt } from '../lib/functions';
 import { useStore } from '../lib/pinia-store';
 
@@ -131,44 +131,57 @@ const router = useRouter();
 const route = useRoute();
 const store = useStore();
 
-onMounted(async () => {
-    if (!store.preferences.username) {
-        router.push({
-            name: 'join-call-room',
-            query: {
-                roomId: route.params.roomId,
-            },
-        });
-        alert(`Please set a username before joining a room`);
-        return;
-    }
-
-    const stream = new MediaStream();
-    try {
-        const streamVideo = await navigator.mediaDevices.getUserMedia({
-            video: true,
-        });
-
-        streamVideo.getTracks().forEach((track) => stream.addTrack(track));
-    } catch (e) {
-        // do nothing
-        console.log('Video access denied');
-    }
-
-    // get audio
-    try {
-        const streamAudio = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-        });
-        streamAudio.getTracks().forEach((track) => stream.addTrack(track));
-
-        if (streamAudio) {
-            store.setStream(stream);
-            store.joinRoom({
-                id: route.params.roomId as string,
-                username: store.preferences.username,
+watch(
+    () => store.isSocketReady,
+    async () => {
+        if (!store.preferences.username) {
+            router.push({
+                name: 'join-call-room',
+                query: {
+                    roomId: route.params.roomId,
+                },
             });
-        } else {
+            alert(`Please set a username before joining a room`);
+            return;
+        }
+
+        const stream = new MediaStream();
+        try {
+            const streamVideo = await navigator.mediaDevices.getUserMedia({
+                video: true,
+            });
+
+            streamVideo.getTracks().forEach((track) => stream.addTrack(track));
+        } catch (e) {
+            // do nothing
+            console.log('Video access denied');
+        }
+
+        // get audio
+        try {
+            const streamAudio = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+            });
+            streamAudio.getTracks().forEach((track) => stream.addTrack(track));
+
+            if (streamAudio) {
+                store.setStream(stream);
+                store.joinRoom({
+                    id: route.params.roomId as string,
+                    username: store.preferences.username,
+                });
+            } else {
+                alert(
+                    'You must allow access at least to your microphone to join a room'
+                );
+                router.push({
+                    name: 'join-call-room',
+                    query: {
+                        roomId: route.params.roomId,
+                    },
+                });
+            }
+        } catch (error) {
             alert(
                 'You must allow access at least to your microphone to join a room'
             );
@@ -179,18 +192,8 @@ onMounted(async () => {
                 },
             });
         }
-    } catch (error) {
-        alert(
-            'You must allow access at least to your microphone to join a room'
-        );
-        router.push({
-            name: 'join-call-room',
-            query: {
-                roomId: route.params.roomId,
-            },
-        });
     }
-});
+);
 
 function isHost() {
     return store.room.hostUid === store.user?.id;

@@ -46,10 +46,12 @@
             <Button
                 variant="hollow"
                 class="p-3"
-                :disabled="!store.hasVideo"
+                :disabled="store.hasVideo"
                 is-square
                 :title="
-                    store.preferences.videoActivated
+                    !store.hasVideo
+                        ? 'Video unavailaible'
+                        : store.preferences.videoActivated
                         ? 'Disable your camera'
                         : 'Enable your camera'
                 "
