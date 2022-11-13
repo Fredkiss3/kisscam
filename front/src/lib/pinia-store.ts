@@ -3,9 +3,15 @@ import { QueryObserver, useQueryClient } from '@tanstack/vue-query';
 import { defineStore } from 'pinia';
 import { io } from 'socket.io-client';
 import { SocketClientEvents, SocketServerEvents } from '@kisscam/shared';
+import { createPeerConnection, randomInt } from './functions';
 
-import type { PiniaStore, AuthUser, UserPrefs, Room } from './types';
-import { randomInt } from './functions';
+import {
+    PiniaStore,
+    AuthUser,
+    UserPrefs,
+    Room,
+    isToggleMessageType,
+} from './types';
 
 export const usePiniaStore = defineStore<
     'store',
@@ -115,12 +121,10 @@ export const usePiniaStore = defineStore<
                         SocketClientEvents.RoomCreationRefused,
                         this.onRoomCreationRefused
                     )
-                    .on(
-                        SocketClientEvents.NewClient,
-                        ({ clientId, clientName, isEmbed }) => {
-                            // TODO...
-                        }
-                    )
+                    .on(SocketClientEvents.NewClient, this.onNewClient)
+                    .on(SocketClientEvents.NewCandidate, this.onNewCandidate)
+                    .on(SocketClientEvents.NewAnswer, this.onNewAnswer)
+                    .on(SocketClientEvents.NewOffer, this.onNewOffer)
                     .on(
                         SocketClientEvents.ClientDisconnected,
                         this.onClientDisconnected
@@ -131,6 +135,7 @@ export const usePiniaStore = defineStore<
         setStream(stream: MediaStream) {
             this.preferences.stream = stream;
         },
+
         async createRoom({ roomName, username, twitchHostName, podTitle }) {
             if (this.user && this.socket) {
                 this.currentStep = 'CREATING_ROOM';
@@ -153,6 +158,114 @@ export const usePiniaStore = defineStore<
                     podTitle,
                     accessToken: this.user.access_token,
                 });
+            }
+        },
+
+        async toggleAudio() {
+            const userStream = this.preferences.stream;
+
+            if (userStream) {
+                userStream.getTracks().forEach((track) => {
+                    if (track.kind === 'audio') {
+                        track.enabled = !this.preferences.audioActivated;
+                    }
+                });
+
+                // Notify the other clients' peers that the user has changed his video state
+                for (const peer of Object.values(this.peers)) {
+                    const { connection, dataChannel } = peer;
+
+                    const sender = connection
+                        .getSenders()
+                        .find((sender) => sender.track?.kind === 'audio');
+
+                    if (sender) {
+                        await sender.replaceTrack(
+                            userStream.getAudioTracks()[0]
+                        );
+                    }
+
+                    dataChannel?.send(
+                        JSON.stringify({
+                            payload: {
+                                audioActivated:
+                                    !this.preferences.audioActivated,
+                            },
+                        })
+                    );
+                }
+
+                this.preferences.audioActivated =
+                    !this.preferences.audioActivated;
+
+                this.saveUserPreferences();
+            }
+        },
+
+        async toggleVideo() {
+            const userStream = this.preferences.stream;
+
+            if (userStream) {
+                userStream.getTracks().forEach((track) => {
+                    if (track.kind === 'video') {
+                        track.enabled = !this.preferences.videoActivated;
+                    }
+                });
+
+                // Notify the other clients' peers that the user has changed his video state
+                for (const peer of Object.values(this.peers)) {
+                    const { connection, dataChannel } = peer;
+
+                    const sender = connection
+                        .getSenders()
+                        .find((sender) => sender.track?.kind === 'video');
+
+                    if (sender) {
+                        await sender.replaceTrack(
+                            userStream.getVideoTracks()[0]
+                        );
+                    }
+
+                    dataChannel?.send(
+                        JSON.stringify({
+                            payload: {
+                                videoActivated:
+                                    !this.preferences.videoActivated,
+                            },
+                        })
+                    );
+                }
+
+                this.preferences.videoActivated =
+                    !this.preferences.videoActivated;
+
+                this.saveUserPreferences();
+            }
+        },
+
+        syncStream({ clientId, state }) {
+            // Sync remote client stream with ours
+            const peer = this.peers[clientId];
+            const isEmbed = this.room.clients[clientId]?.isEmbed;
+
+            if (peer && !isEmbed) {
+                const { stream } = peer;
+
+                if (stream) {
+                    if (state.videoActivated !== undefined) {
+                        stream.getVideoTracks()[0].enabled =
+                            state.videoActivated;
+                        this.room.clients[clientId].videoActivated =
+                            state.videoActivated;
+                    }
+                    if (state.audioActivated !== undefined) {
+                        stream.getAudioTracks()[0].enabled =
+                            state.audioActivated;
+                        this.room.clients[clientId].audioActivated =
+                            state.audioActivated;
+                    }
+                    console.log('syncStream', state);
+                }
             }
         },
 
@@ -329,6 +442,279 @@ export const usePiniaStore = defineStore<
             );
 
             this.room.clients = listClients;
+        },
+
+        onNewClient({ clientUid, clientName, isEmbed }) {
+            if (this.user) {
+                const clientInRoom = this.room.clients[clientUid];
+
+                if (!clientInRoom && clientUid !== this.user.id && !isEmbed) {
+                    // if (this.user.isEmbed && clientId !== this.user.idToFilter) {
+                    //     return;
+                    // }
+
+                    this.room.clients[clientUid] = {
+                        clientName,
+                        peepNo: randomInt(1, 105),
+                        isEmbed: !!isEmbed,
+                    };
+
+                    this.peers[clientUid] = {
+                        connection: createPeerConnection(),
+                        isInitiator: true,
+                        stream: new MediaStream(),
+                    };
+
+                    const stream = this.preferences.stream;
+
+                    const { connection } = this.peers[clientUid];
+                    // connect only one way when embed
+                    // if (this.user.isEmbed) {
+                    //     connection.addTransceiver('audio', {
+                    //         direction: 'recvonly',
+                    //     });
+                    //     connection.addTransceiver('video', {
+                    //         direction: 'recvonly',
+                    //     });
+                    // }
+
+                    if (stream) {
+                        // Add local stream to peer connection only if not embed
+                        stream
+                            .getTracks()
+                            .forEach((track) =>
+                                connection.addTrack(track, stream)
+                            );
+                    }
+
+                    // Send candidates when there are ones
+                    connection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            this.socket?.emit(
+                                SocketServerEvents.SendCandidate,
+                                {
+                                    toClientId: clientUid,
+                                    iceCandidate: event.candidate,
+                                }
+                            );
+                        }
+                    };
+
+                    // Add remote stream to peer connection
+                    connection.ontrack = (event) => {
+                        console.log(
+                            `Received stream from peer "${clientUid}": `,
+                            event.streams[0],
+                            'client data => ',
+                            this.room.clients[clientUid]
+                        );
+
+                        this.peers[clientUid].stream = event.streams[0];
+                    };
+
+                    // create channel for sending data
+                    const channel = connection.createDataChannel(
+                        `events-${this.user.id}-${clientUid}`
+                    );
+
+                    channel.onopen = (event) => {
+                        // Send the user's stream state to the new client
+                        channel.send(
+                            JSON.stringify({
+                                payload: {
+                                    videoActivated:
+                                        this.preferences.videoActivated,
+                                    audioActivated:
+                                        this.preferences.audioActivated,
+                                },
+                            })
+                        );
+                    };
+
+                    // Listen for data channel messages
+                    channel.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            // If the message is a toggled video or audio state, update the client's stream
+                            if (isToggleMessageType(data)) {
+                                const { payload } = data;
+
+                                this.syncStream({
+                                    clientId: clientUid,
+                                    state: payload,
+                                });
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    };
+
+                    connection.onnegotiationneeded = (ev) => {
+                        // if (this.user.isEmbed) {
+                        //     connection
+                        //         .createOffer({
+                        //             offerToReceiveAudio: true,
+                        //             offerToReceiveVideo: true,
+                        //         })
+                        //         .then((sdp) =>
+                        //             connection.setLocalDescription(sdp)
+                        //         )
+                        //         .then(() => {
+                        //             this.socket?.emit(
+                        //                 SocketServerEvents.SendOffer,
+                        //                 {
+                        //                     toClientId: clientId,
+                        //                     sdpOffer:
+                        //                         connection.localDescription!,
+                        //                 }
+                        //             );
+                        //         });
+                        // } else {
+                        connection
+                            .createOffer()
+                            .then((sdp) => connection.setLocalDescription(sdp))
+                            .then(() => {
+                                this.socket?.emit(
+                                    SocketServerEvents.SendOffer,
+                                    {
+                                        toClientId: clientUid,
+                                        sdpOffer: connection.localDescription!,
+                                    }
+                                );
+                            });
+                        // }
+                    };
+
+                    this.peers[clientUid].dataChannel = channel;
+                }
+            }
+        },
+
+        onNewAnswer({ fromClientId, sdpAnswer }) {
+            const peer = this.peers[fromClientId];
+
+            if (peer) {
+                peer.connection.setRemoteDescription(
+                    sdpAnswer as RTCSessionDescriptionInit
+                );
+            }
+        },
+
+        onNewOffer({ fromClientId, sdpOffer }) {
+            const peer = this.peers[fromClientId];
+
+            // Don't accept sdpOffer from not filtered client if embed
+            // if (this.user.isEmbed && fromClientId !== this.user.idToFilter) {
+            //     return;
+            // }
+
+            if (peer) {
+                return;
+            } else {
+                this.peers[fromClientId] = {
+                    connection: createPeerConnection(),
+                    isInitiator: false,
+                    stream: new MediaStream(),
+                };
+
+                // Add local stream to peer connection
+                const { connection } = this.peers[fromClientId];
+
+                // connect only one way when embed
+                // if (this.user.isEmbed) {
+                //     connection.addTransceiver('audio', {
+                //         direction: 'recvonly',
+                //     });
+                //     connection.addTransceiver('video', {
+                //         direction: 'recvonly',
+                //     });
+                // }
+
+                const localStream = this.preferences.stream;
+
+                if (localStream) {
+                    // Add local stream to peer connection only if not embed
+                    localStream
+                        .getTracks()
+                        .forEach((track) =>
+                            connection.addTrack(track, localStream)
+                        );
+                }
+
+                // Add remote stream to peer connection
+                connection.ontrack = (event) => {
+                    this.peers[fromClientId].stream = event.streams[0];
+                };
+
+                // Send candidates when there are ones
+                connection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        this.socket?.emit(SocketServerEvents.SendCandidate, {
+                            toClientId: fromClientId,
+                            iceCandidate: event.candidate,
+                        });
+                    }
+                };
+
+                connection.ondatachannel = (event) => {
+                    const channel = event.channel;
+
+                    channel.onopen = (event) => {
+                        // Send the user's stream state to the new client
+                        channel.send(
+                            JSON.stringify({
+                                payload: {
+                                    videoActivated:
+                                        this.preferences.videoActivated,
+                                    audioActivated:
+                                        this.preferences.audioActivated,
+                                },
+                            })
+                        );
+                    };
+
+                    // Listen for data channel messages
+                    channel.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            // If the message is a toggled video or audio state, update the client's stream
+                            if (isToggleMessageType(data)) {
+                                const { payload } = data;
+
+                                this.syncStream({
+                                    clientId: fromClientId,
+                                    state: payload,
+                                });
+                            }
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    };
+
+                    this.peers[fromClientId].dataChannel = channel;
+                };
+
+                connection
+                    .setRemoteDescription(sdpOffer as RTCSessionDescriptionInit)
+                    .then(() => connection.createAnswer())
+                    .then((sdp) => connection.setLocalDescription(sdp))
+                    .then(() => {
+                        this.socket?.emit(SocketServerEvents.SendAnswer, {
+                            toClientId: fromClientId,
+                            sdpAnswer: connection.localDescription!,
+                        });
+                    });
+            }
+        },
+
+        onNewCandidate({ fromClientId, iceCandidate }) {
+            const peer = this.peers[fromClientId];
+
+            if (peer) {
+                peer.connection.addIceCandidate(
+                    new RTCIceCandidate(iceCandidate)
+                );
+            }
         },
     },
 });

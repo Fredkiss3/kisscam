@@ -33,7 +33,7 @@ export type Room = {
             videoActivated?: boolean;
             audioActivated?: boolean;
             isEmbed: boolean;
-            isPending: boolean;
+            isPending?: boolean;
         }
     >;
 };
@@ -152,6 +152,15 @@ export type PiniaStore = {
         grantAccessToRoom: (toClientId: string) => void;
         denyAccessToRoom: (toClientId: string) => void;
         removeAccessToRoom: (toClientId: string) => void;
+        toggleVideo: () => Promise<void>;
+        toggleAudio: () => Promise<void>;
+        syncStream: (args: {
+            clientId: string;
+            state: {
+                videoActivated?: boolean;
+                audioActivated?: boolean;
+            };
+        }) => void;
         // events
         onRoomCreated: ClientEventMap[SocketClientEvents.RoomCreated];
         onRoomAccessDenied: ClientEventMap[SocketClientEvents.RoomAccessDenied];
@@ -162,6 +171,10 @@ export type PiniaStore = {
         onRoomAccessRemoved: ClientEventMap[SocketClientEvents.RoomAccessRemoved];
         onRoomJoined: ClientEventMap[SocketClientEvents.RoomJoined];
         onClientDisconnected: ClientEventMap[SocketClientEvents.ClientDisconnected];
+        onNewClient: ClientEventMap[SocketClientEvents.NewClient];
+        onNewCandidate: ClientEventMap[SocketClientEvents.NewCandidate];
+        onNewAnswer: ClientEventMap[SocketClientEvents.NewAnswer];
+        onNewOffer: ClientEventMap[SocketClientEvents.NewOffer];
     };
     //
     // peers: Record<string, Peer>; // clientId: Peer
