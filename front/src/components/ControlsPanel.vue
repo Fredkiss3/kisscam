@@ -50,7 +50,7 @@
                 is-square
                 :title="
                     !store.hasVideo
-                        ? 'Video unavailaible'
+                        ? 'Video unavailable'
                         : store.preferences.videoActivated
                         ? 'Disable your camera'
                         : 'Enable your camera'
@@ -62,7 +62,7 @@
                     class="h-6 text-white"
                 />
                 <CameraOffIcon
-                    v-if="!store.preferences.videoActivated"
+                    v-else
                     class="h-6 text-secondary"
                 />
             </Button>
