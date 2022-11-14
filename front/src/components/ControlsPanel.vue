@@ -46,7 +46,7 @@
             <Button
                 variant="hollow"
                 class="p-3"
-                :disabled="store.hasVideo"
+                :disabled="!store.hasVideo"
                 is-square
                 :title="
                     !store.hasVideo
@@ -58,8 +58,8 @@
                 @click="store.toggleVideo()"
             >
                 <CameraIcon
-                    v-if="store.preferences.videoActivated"
-                    class="h-6"
+                    v-if="store.preferences.videoActivated || !store.hasVideo"
+                    class="h-6 text-white"
                 />
                 <CameraOffIcon
                     v-if="!store.preferences.videoActivated"

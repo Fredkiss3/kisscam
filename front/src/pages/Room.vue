@@ -131,9 +131,14 @@ const router = useRouter();
 const route = useRoute();
 const store = useStore();
 
+onMounted(() => joinRoom())
+
 watch(
     () => store.isSocketReady,
-    async () => {
+    joinRoom
+);
+
+async function joinRoom() {
         if (!store.preferences.username) {
             router.push({
                 name: 'join-call-room',
@@ -192,8 +197,7 @@ watch(
                 },
             });
         }
-    }
-);
+}
 
 function isHost() {
     return store.room.hostUid === store.user?.id;
