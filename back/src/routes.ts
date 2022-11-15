@@ -90,13 +90,11 @@ export async function stripeWebHookHandler(
             const start = new Date(
                 (event.data.object as any).period_start * 1000
             );
-            const end = new Date((event.data.object as any).period_end * 1000);
 
             const { error } = await supabaseAdmin
                 .from('profile')
                 .update({
                     subscribed_at: start.toISOString(),
-                    subscription_end_at: end.toISOString(),
                 })
                 .eq('stripe_customer_id', (event.data.object as any).customer)
                 .select();
@@ -108,6 +106,30 @@ export async function stripeWebHookHandler(
                 });
             }
             break;
+        }
+        case 'customer.subscription.created': {
+            // update subscription end 
+            const end = new Date(
+                (event.data.object as any).current_period_end * 1000
+            );
+
+            // end subscription
+            const { error } = await supabaseAdmin
+                .from('profile')
+                .update({
+                    subscription_end_at: end.toISOString(),
+                })
+                .eq('stripe_customer_id', (event.data.object as any).customer)
+                .select();
+
+            if (error) {
+                console.error(error);
+                return res.status(400).send({
+                    success: false,
+                    error: `Webhook Error: ${error.toString()}`,
+                });
+            }
+            return;
         }
         case 'customer.subscription.deleted': {
             // end subscription
@@ -137,7 +159,7 @@ export async function stripeWebHookHandler(
             const { error } = await supabaseAdmin
                 .from('profile')
                 .update({
-                    subscription_end_at: end,
+                    subscription_end_at: end.toISOString(),
                 })
                 .eq('stripe_customer_id', (event.data.object as any).customer)
                 .select();
