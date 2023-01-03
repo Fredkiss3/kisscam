@@ -1,7 +1,7 @@
 
 <p align="center">
   <a href="https://kisscam.fredkiss.dev">
-    <img alt="Design" src="./design/KISSCAM-V-2.png" width="100%" />
+    <img alt="Design" src="https://user-images.githubusercontent.com/38298743/210382372-4f2111d2-b9af-456d-b8f0-c0a479c9b811.png" width="100%" />
   </router-link>
 </p>
 
