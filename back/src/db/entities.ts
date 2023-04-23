@@ -7,7 +7,6 @@ export class Client extends Entity {
     socketId?: string | null;
     roomId?: string;
     embbeddedClientUid?: string | null;
-
     isHost?: boolean;
     isEmbed?: boolean;
     isOnline?: boolean;

@@ -80,7 +80,7 @@ export function useCheckoutSessionMutation() {
 
         if (stripe && user) {
             const res = await jsonFetch<{ id: string }>(
-                // @ts-ignore
+                // @ts-ignore Ignore env not found errors
                 `//${import.meta.env.VITE_WS_URL}/api/create-checkout-session`,
                 {
                     method: 'POST',
